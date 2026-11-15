@@ -14,6 +14,7 @@ DAYANEXA is not a job board, freelancer marketplace, passive opportunity directo
 - Repository foundation: committed to main.
 - Product Constitution, architecture, lifecycle, agent model, governance, economics, provider strategy, roadmap, and ADRs: documented in /docs.
 - Runtime: React + TypeScript + Vite command-center prototype plus a Cloudflare Workers API foundation under `apps/api`; not production-ready.
+- AI inference direction: Cloudflare Workers AI via the native `env.AI` binding is the primary/default path; GroqCloud is optional and disabled by default. Live model use, quota and billing must be verified against the Cloudflare account.
 - CI: GitHub Actions typecheck and production build passed on commit e86193a; latest documentation commits are awaiting CI verification.
 - Clerk JWT verification and four payment gateway adapters are scaffolded in `apps/api`; live credentials, sandbox contract tests, payment reconciliation and payouts are not enabled.
 - Domain: dayanexa.biz.id (ownership reported by project owner; DNS and deployment not verified here).
@@ -45,6 +46,9 @@ npm run build
 - [Implementation Foundation V1](docs/15-implementation-foundation.md)
 - [Master System & Full-Stack Implementation Specification](docs/16-master-system-and-full-stack-implementation.md)
 - [Master System / Full-Stack Implementation Prompt](prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md)
+
+## AI inference decision
+Cloudflare Workers AI is the default inference runtime through the Cloudflare Worker `env.AI` binding. GroqCloud is retained only as an optional adapter and is not required for baseline operation. See the master system and implementation prompt for model governance, budget controls, AI Gateway boundaries and activation gates.
 - [API setup and safety defaults](apps/api/README.md)
 - [Architecture Decision Records](docs/adr/)
 
