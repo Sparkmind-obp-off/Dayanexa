@@ -11,9 +11,10 @@ DAYANEXA is an agentic economic execution system. It discovers real market deman
 DAYANEXA is not a job board, freelancer marketplace, passive opportunity directory, generic chatbot, or capability-limited service agency. Demand discovery must not be constrained by the capabilities currently installed.
 
 ## Current status
-- Repository foundation: initializing.
-- Product Constitution and architecture: documented in `/docs`.
-- Runtime: foundation scaffold; not production-ready.
+- Repository foundation: committed to `main`.
+- Product Constitution, architecture, lifecycle, agent model, governance, economics, roadmap, and ADRs: documented in `/docs`.
+- Runtime: React + TypeScript + Vite command-center foundation; prototype only, not production-ready.
+- CI: GitHub Actions typecheck and production build passed on the current workflow run.
 - Integrations, live market ingestion, payments, contributor payouts, and autonomous external commitments: not enabled.
 - Domain: `dayanexa.biz.id` (ownership reported by project owner; DNS and deployment not verified here).
 
