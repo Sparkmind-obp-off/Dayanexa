@@ -43,6 +43,8 @@ npm run build
 - [Provider Stack & Cost Governance](docs/13-provider-stack-and-cost-governance.md)
 - [Identity, Monetization & Payment Architecture](docs/14-identity-monetization-and-payments.md)
 - [Implementation Foundation V1](docs/15-implementation-foundation.md)
+- [Master System & Full-Stack Implementation Specification](docs/16-master-system-and-full-stack-implementation.md)
+- [Master System / Full-Stack Implementation Prompt](prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md)
 - [API setup and safety defaults](apps/api/README.md)
 - [Architecture Decision Records](docs/adr/)
 
