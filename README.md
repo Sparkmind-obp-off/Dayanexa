@@ -14,7 +14,7 @@ DAYANEXA is not a job board, freelancer marketplace, passive opportunity directo
 - Repository foundation: committed to main.
 - Product Constitution, architecture, lifecycle, agent model, governance, economics, provider strategy, roadmap, and ADRs: documented in /docs.
 - Runtime: React + TypeScript + Vite command-center foundation; prototype only, not production-ready.
-- CI: GitHub Actions typecheck and production build passed on the previous verified workflow run; rerun after this documentation-only commit is pending.
+- CI: GitHub Actions typecheck and production build passed on commit e86193a; latest documentation commits are awaiting CI verification.
 - Integrations, live market ingestion, payments, contributor payouts, and autonomous external commitments: not enabled.
 - Domain: dayanexa.biz.id (ownership reported by project owner; DNS and deployment not verified here).
 
@@ -41,6 +41,7 @@ npm run build
 - [Implementation Blueprint](docs/11-implementation-blueprint.md)
 - [MVP Acceptance Criteria](docs/12-mvp-acceptance.md)
 - [Provider Stack & Cost Governance](docs/13-provider-stack-and-cost-governance.md)
+- [Identity, Monetization & Payment Architecture](docs/14-identity-monetization-and-payments.md)
 - [Architecture Decision Records](docs/adr/)
 
 ## Non-negotiable safeguards
