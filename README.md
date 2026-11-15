@@ -13,9 +13,9 @@ DAYANEXA is not a job board, freelancer marketplace, passive opportunity directo
 ## Current status
 - Repository foundation: committed to main.
 - Product Constitution, architecture, lifecycle, agent model, governance, economics, provider strategy, roadmap, and ADRs: documented in /docs.
-- Runtime: React + TypeScript + Vite command-center foundation; prototype only, not production-ready.
+- Runtime: React + TypeScript + Vite command-center prototype plus a Cloudflare Workers API foundation under `apps/api`; not production-ready.
 - CI: GitHub Actions typecheck and production build passed on commit e86193a; latest documentation commits are awaiting CI verification.
-- Integrations, live market ingestion, payments, contributor payouts, and autonomous external commitments: not enabled.
+- Clerk JWT verification and four payment gateway adapters are scaffolded in `apps/api`; live credentials, sandbox contract tests, payment reconciliation and payouts are not enabled.
 - Domain: dayanexa.biz.id (ownership reported by project owner; DNS and deployment not verified here).
 
 ## Start locally
@@ -42,6 +42,8 @@ npm run build
 - [MVP Acceptance Criteria](docs/12-mvp-acceptance.md)
 - [Provider Stack & Cost Governance](docs/13-provider-stack-and-cost-governance.md)
 - [Identity, Monetization & Payment Architecture](docs/14-identity-monetization-and-payments.md)
+- [Implementation Foundation V1](docs/15-implementation-foundation.md)
+- [API setup and safety defaults](apps/api/README.md)
 - [Architecture Decision Records](docs/adr/)
 
 ## Non-negotiable safeguards

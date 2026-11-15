@@ -33,6 +33,7 @@ export interface GatewayEnv {
   DUITKU_API_KEY?: string;
   DUITKU_BASE_URL?: string;
   XENDIT_SECRET_KEY?: string;
+  XENDIT_CALLBACK_TOKEN?: string;
   XENDIT_BASE_URL?: string;
   MIDTRANS_SERVER_KEY?: string;
   MIDTRANS_BASE_URL?: string;

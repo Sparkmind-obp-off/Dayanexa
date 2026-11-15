@@ -1,4 +1,4 @@
-import { digestHex, hmacHex, md5Hex, safeEqual } from "./crypto";
+import { digestHex, md5Hex, safeEqual } from "./crypto";
 import type { GatewayEnv, GatewayId, GatewayResult, NormalizedWebhook, PaymentGateway, PaymentRequest } from "./types";
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -30,7 +30,7 @@ export class DuitkuGateway implements PaymentGateway {
     const apiKey = env.DUITKU_API_KEY!;
     const signature = md5Hex(merchantCode + request.amount + request.orderId + apiKey);
     const result = await postJson(env.DUITKU_BASE_URL!.replace(/\/$/,"") + "/webapi/api/merchant/v2/inquiry", {}, {
-      merchantCode, paymentAmount: request.amount, paymentMethod: "VC", merchantOrderId: request.orderId,
+      merchantCode, paymentAmount: request.amount, paymentMethod: request.paymentMethod || "VC", merchantOrderId: request.orderId,
       productDetails: request.description, customerVaName: request.customer.name, email: request.customer.email,
       phoneNumber: request.customer.phone ?? "", callbackUrl: request.callbackUrl, returnUrl: request.returnUrl,
       signature, expiryPeriod: 60
@@ -65,7 +65,7 @@ export class XenditGateway implements PaymentGateway {
   }
   async verifyWebhook(env: GatewayEnv, headers: Headers) {
     const token=headers.get("x-callback-token") || "";
-    return Boolean(env.XENDIT_SECRET_KEY && env.XENDIT_SECRET_KEY.length && env.XENDIT_SECRET_KEY === token);
+    return Boolean(env.XENDIT_CALLBACK_TOKEN && env.XENDIT_CALLBACK_TOKEN.length && safeEqual(env.XENDIT_CALLBACK_TOKEN, token));
   }
   normalizeWebhook(payload: Record<string,unknown>): NormalizedWebhook {
     return {eventId:str(payload.id || payload.external_id),orderId:str(payload.external_id),providerTransactionId:str(payload.id),status:statusFrom(payload.status),eventType:"xendit.invoice"};

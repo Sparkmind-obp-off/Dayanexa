@@ -8,6 +8,7 @@ Cloudflare Workers API for Clerk-backed identity, payment gateway adapters and t
 - Live payment calls are blocked unless both variables explicitly enable live mode.
 - Provider credentials are server-side Worker secrets only. Never add them to Vite variables, source control, or client code.
 - Clerk JWT verification uses the production Clerk JWT public key configured as `CLERK_JWT_KEY`; set `CLERK_AUTHORIZED_PARTIES` to the exact production frontend origin(s).
+- Xendit callback verification uses the separate `XENDIT_CALLBACK_TOKEN`, not the API secret key.
 - The first authenticated user receives an internal DAYANEXA identity. Role grants and privileged actions must remain server-side.
 
 ## Setup

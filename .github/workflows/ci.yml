@@ -17,9 +17,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm install
-      - name: Type check
+      - name: Frontend type check
         run: npm run check
-      - name: Production build
+      - name: Frontend production build
         run: npm run build
+      - name: Install API dependencies
+        run: npm --prefix apps/api install
+      - name: API type check
+        run: npm --prefix apps/api run typecheck

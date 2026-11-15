@@ -1,0 +1,21 @@
+# Set these as Cloudflare Worker secrets/vars. Never commit actual credentials.
+APP_ENV=production
+PAYMENTS_MODE=mock
+PAYMENT_LIVE_ENABLED=false
+CLERK_JWT_KEY=
+CLERK_AUTHORIZED_PARTIES=https://dayanexa.biz.id
+PUBLIC_API_ORIGIN=https://dayanexa.biz.id
+DUITKU_MERCHANT_CODE=
+DUITKU_API_KEY=
+DUITKU_BASE_URL=https://sandbox.duitku.com
+XENDIT_SECRET_KEY=
+XENDIT_CALLBACK_TOKEN=
+XENDIT_BASE_URL=https://api.xendit.co
+MIDTRANS_SERVER_KEY=
+MIDTRANS_BASE_URL=https://app.sandbox.midtrans.com
+FASPAY_MERCHANT_ID=
+FASPAY_MERCHANT_NAME=
+FASPAY_USER_ID=
+FASPAY_PASSWORD=
+FASPAY_PAYMENT_CHANNEL=
+FASPAY_DEBIT_ENDPOINT=
