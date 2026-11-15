@@ -1,7 +1,7 @@
 # DAYANEXA — Master System & Full-Stack Implementation Specification
 
 **Document type:** Canonical implementation contract  
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** 16 November 2026  
 **Status:** Approved architectural direction; implementation and production activation remain gated  
 **Repository:** `Sparkmind-obp-off/Dayanexa` · `main`  
@@ -11,7 +11,7 @@
 
 ## 0. Purpose and authority
 
-This document consolidates the product constitution, domain architecture, provider strategy, identity, monetization, payments and delivery requirements into one implementation contract. It is the governing reference for the complete DAYANEXA build.
+This document consolidates the product constitution, domain architecture, Cloudflare-native inference strategy, provider strategy, identity, monetization, payments and delivery requirements into one implementation contract. It is the governing reference for the complete DAYANEXA build.
 
 The implementation agent MUST read this document and the linked canonical documents before changing code. If a conflict exists, use this precedence:
 
@@ -66,7 +66,7 @@ External vendors are replaceable capabilities, not the system's source of truth.
 | Coordination/realtime | Durable Objects only where single-writer coordination or realtime state is required | Locks, coordination, live operational state |
 | Authentication | **Clerk Production** | Authentication, sessions, user lifecycle, account recovery |
 | Authorization | DAYANEXA policy service and D1 | Roles, scopes, permissions, approvals and ownership |
-| AI inference | GroqCloud adapter first; model/provider registry | Classification, extraction assistance, reasoning and generation |
+| AI inference | **Cloudflare Workers AI first via native `env.AI` binding**; model/provider registry; GroqCloud optional adapter only | Classification, extraction assistance, reasoning, generation and bounded agent tasks |
 | Search/discovery | Tavily adapter | Search discovery and source finding |
 | Crawl/extraction | Firecrawl adapter | Website/page extraction and crawl jobs |
 | Specialized scraping | Apify OR Scrape.ly adapters, selected per source benchmark | Platform-specific structured collection |
@@ -77,6 +77,20 @@ External vendors are replaceable capabilities, not the system's source of truth.
 | Domain/DNS | Cloudflare | DNS, TLS, routing and environment separation |
 
 This is a target design, not a claim that every account, plan, feature or resource is currently activated. Confirm account-specific availability, limits and prices before relying on them.
+
+### Cloudflare-native AI inference baseline
+
+**Default inference provider: Cloudflare Workers AI.** The initial runtime must call the native Workers AI binding from the Cloudflare Worker that owns the API. Use `env.AI.run(modelId, input, options?)`; declare the binding in the API Worker's Wrangler configuration (`ai.binding = "AI"`) and regenerate Worker environment types after configuration changes. Do not expose inference calls or Cloudflare credentials from the browser.
+
+- Use Workers AI model IDs from the current official model catalog. Resolve and pin a tested model ID per task profile in server-side configuration; do not assume a model name remains available forever.
+- Keep task profiles distinct (fast classification, structured extraction, multilingual reasoning, tool-capable agent turn, embeddings, vision or other modality). A model is eligible only after checking its current availability, input/output schema, context window, tool/JSON/streaming support, latency, quality and pricing.
+- Build a provider-neutral `InferenceProvider` contract so the domain layer does not depend on Workers AI response shapes. Normalize text, structured output, tool calls, token/usage metadata, finish reason, errors and provider request IDs.
+- Use Workers AI as the initial/default route. GroqCloud is an optional, disabled-by-default adapter; it is not required for a normal DAYANEXA deployment. Enabling it requires an explicit configuration change, secret stored in Worker secrets, cost ceiling, tests and owner approval.
+- AI Gateway may be enabled with the same binding for observability, caching, rate limits, metadata and unified routing when its configuration and billing behavior are verified. Do not confuse AI Gateway with the model itself. Do not enable third-party Unified Billing or prepaid credits without owner approval.
+- Local Wrangler inference still consumes the Cloudflare account's Workers AI allocation. Tests that must not call a real model use a deterministic mock adapter; a deliberately marked integration smoke test may call the real binding under a tiny budget.
+- Treat the advertised free allocation and rate limits as mutable account-level constraints, not guaranteed capacity. At the time this specification was reviewed (16 Nov 2026), Cloudflare documented 10,000 Neurons/day free allocation, Workers Paid overage at $0.011 per 1,000 Neurons, and text-generation default rate limits of 300 requests/minute subject to model-specific exceptions. Re-check official pricing/limits and the account dashboard before activation; paid-only frontier models may require Workers Paid or prepaid AI Gateway credits.
+- Implement a daily and monthly neuron/cost budget, per-request maximum output, input-size limits, concurrency/rate controls, request timeout, cancellation, bounded retry and circuit breaker. Persist estimated and actual usage where available. If usage cannot be measured exactly, mark it estimated and preserve the provider's usage payload.
+- When quota is exhausted, rate-limited, unavailable or over budget, fail closed and return a clear deferred/temporarily unavailable result. Do not silently switch to Groq, another paid model, or a third-party AI Gateway provider.
 
 ### Architectural rule
 Start as a **modular monolith** with clear domain boundaries, shared contracts and asynchronous workers. Do not split into microservices until measured scale, team ownership or isolation requirements justify it.
@@ -179,7 +193,9 @@ Production acceptance requires a successful real sign-in on the production domai
 Create one provider registry with normalized interfaces, capability metadata, health, configuration status, pricing model, quotas, cost limits, environment support and fallback policy. A provider being listed does not mean it is enabled.
 
 ### AI and market intelligence
-- **GroqCloud:** model inference adapter. Model selection, token accounting, latency/error tracking, prompt/version trace and per-task budget.
+- **Cloudflare Workers AI (primary/default):** native inference adapter using the Worker's `env.AI` binding. Use current catalog model IDs, server-side task profiles, normalized output/tool-call contracts, model capability checks, request and usage accounting, daily/monthly budget enforcement, rate limits, caching where appropriate, latency/error tracking and prompt/version traces. No provider API key is required for the native binding, but account-level quotas and paid model/billing rules still apply.
+- **Cloudflare AI Gateway (optional Cloudflare control plane):** may sit on the binding path for observability, caching, rate limiting, metadata, and unified billing/routing. Enable only after verifying the gateway ID, billing mode, logs and account permissions. Third-party models through Unified Billing are not automatically free and are disabled until explicitly approved.
+- **GroqCloud (optional secondary adapter):** preserve a provider-neutral adapter boundary, but keep Groq disabled by default and never require `GROQ_API_KEY` for baseline operation. Enable only through owner-approved configuration, Worker secret, explicit cost ceiling and contract tests. It must never be an automatic paid fallback.
 - **Tavily:** search/discovery adapter. Preserve query, source URL, timestamps and evidence provenance. Search result is a signal, not validated demand.
 - **Firecrawl:** scrape/crawl/extract adapter. Preserve page URL, crawl time, extraction schema, content hash and source terms.
 - **Apify:** specialized actor adapter for source-specific structured data. Require actor README/schema, permissions, data minimization, run limits and per-result cost measurement.
@@ -202,7 +218,16 @@ Every adapter must implement:
 - Sandbox/production environment separation.
 - Contract tests using recorded fixtures and, when available, sandbox credentials.
 
-Never auto-fallback to a paid provider. Paid fallback requires a configured ceiling and explicit owner approval. If quota/cost limit is exceeded, fail closed, defer or request approval.
+### Inference routing and resilience
+- Route by task profile and verified model capability, not by arbitrary agent preference. Store model ID, provider ID, task profile, prompt version, output schema version and policy decision with each inference trace.
+- The default route is Workers AI through `env.AI`. Provider/model selection is server-side and allowlisted; clients cannot submit arbitrary model IDs or gateway IDs.
+- Retry only transient errors, with bounded exponential backoff and jitter. Do not retry invalid input, policy refusal, unsupported modality or budget exhaustion.
+- Keep streaming and non-streaming paths explicit. Validate structured output after generation; never treat syntactically valid JSON as evidence of factual correctness.
+- Tool calls are proposals, not permissions. The application validates tool name, schema, user authorization, resource scope, budget and approval before execution.
+- Keep a deterministic mock provider for unit/integration tests. Real inference integration tests must be explicitly labeled, low-volume and budgeted.
+- Record provider/model, model revision if available, request ID, task type, latency, estimated/actual neurons or tokens, input/output size, cache status, finish reason and normalized error. Redact prompts/results that contain sensitive data according to retention policy.
+
+Never auto-fallback to a paid provider. GroqCloud or any third-party provider through AI Gateway is not an automatic fallback. Any secondary provider requires a configured ceiling and explicit owner approval. If quota/cost limit is exceeded, fail closed, defer or request approval.
 
 ## 8. Payment gateway architecture — Duitku, Xendit, Midtrans and Faspay
 
@@ -330,7 +355,7 @@ Initial cost doctrine:
 - Never top up, subscribe or invoke paid overage without explicit approval.
 - If a free allowance is exhausted, stop/defer rather than silently spend.
 
-Apify vs Scrape.ly must be selected through a source-specific benchmark: coverage, freshness, completeness, success rate, price per accepted evidence, legal permissions and operational reliability. Tavily search and Firecrawl extraction are complementary, not interchangeable. Groq inference is not workflow orchestration.
+Apify vs Scrape.ly must be selected through a source-specific benchmark: coverage, freshness, completeness, success rate, price per accepted evidence, legal permissions and operational reliability. Tavily search and Firecrawl extraction are complementary, not interchangeable. Workers AI is inference, not workflow orchestration. Cloudflare Workers AI's daily free allocation, rate limits, model catalog and per-model pricing can change; check current Cloudflare documentation and the actual account dashboard before activating models. Local Wrangler inference also consumes account allocation. GroqCloud remains optional and disabled by default; never silently route to a paid model or Unified Billing.
 
 ## 14. Build phases and exit gates
 
@@ -350,7 +375,9 @@ Apify vs Scrape.ly must be selected through a source-specific benchmark: coverag
 
 ### Phase 2 — Market intelligence
 - Provider registry and cost governor.
-- Groq, Tavily, Firecrawl adapters.
+- Cloudflare Workers AI adapter through `env.AI`, task-profile/model registry, deterministic mock, budget/rate governor and low-volume integration smoke test.
+- Optional GroqCloud adapter behind an explicit disabled-by-default feature flag; no Groq secret is required for baseline deployment.
+- Tavily and Firecrawl adapters.
 - Apify and Scrape.ly benchmark harness and selected adapter.
 - Provenance, source permissions, evidence store and demand validation.
 **Exit:** reproducible evidence pipeline with cost/provenance and no fabricated demand.
