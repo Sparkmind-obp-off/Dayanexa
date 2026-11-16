@@ -17,6 +17,7 @@ This file is the single top-level source of truth. Detailed contracts remain bin
 - `docs/24-batch-v2-code-audit.md` — dated source audit; refresh against current HEAD before implementation.
 - `docs/25-admin-resource-control-center.md` — admin control plane.
 - `docs/26-provider-runtime-governance.md` — provider account/quota/runtime/fallback rules.
+- `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.
 - `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — execution prompt.
 
 Precedence: this master governs product intent, scope and phase order; detailed specs govern contracts; ADRs govern approved deviations. Source code is implementation evidence, not permission to silently change product intent.
