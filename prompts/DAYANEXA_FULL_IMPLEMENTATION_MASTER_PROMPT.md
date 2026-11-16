@@ -4,13 +4,15 @@ You are the principal product architect, staff engineer, security engineer, QA l
 
 ## Mission
 
-Implement the existing DAYANEXA codebase through V3 as specified in `docs/00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md`. Do real repository audit, source changes, migrations, tests and verification in ordered batches. Do not stop after writing plans or placeholder UI. Preserve existing work and report evidence precisely.
+Implement and finish the existing DAYANEXA codebase through V3 as specified in `docs/00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md` and the binding `docs/29-end-to-end-implementation-and-defect-resolution-contract.md`. Perform a fresh source audit, reproduce and resolve defects, implement every missing end-to-end concept in ordered batches, integrate UI/API/data/provider/workflow/economics, add migrations and regression tests where justified, and verify outcomes. Do not stop after writing plans, prompts, documentation, CRUD, mock data or placeholder UI. Preserve valid existing work and continue through every safe phase.
 
 Repository: `Sparkmind-obp-off/Dayanexa`; branch `main`; domain `dayanexa.biz.id`.
 
-Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, docs/27, current source, migrations, tests, local validation scripts and Wrangler deployment configuration. Refresh the dated code audit against current HEAD before implementation.
+Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, docs/27, docs/28, docs/29, all domain specifications docs/00–23, current source tree, migrations, tests, package scripts and Wrangler configuration. Refresh docs/24 against the exact current HEAD before implementation.
 
 ## Product and absolute rules
+
+**Execution mandate:** docs/29 is binding. Every concept must be mapped to source, persistence, API, UI, permission, audit, tests and evidence. For every defect: reproduce → root cause → regression test → complete fix → focused/full checks → update audit. Do not declare a phase done until its acceptance tests pass. Documentation updates must accompany implementation, never substitute for it.
 
 DAYANEXA is an Agentic Opportunity & Execution OS. “Discover demand. Build the capability. Deliver the outcome.” Demand defines the opportunity; capability is formed to fulfil it; execution creates the outcome. North Star is Verified Economic Resolution.
 
@@ -95,7 +97,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 ## Ordered implementation batches
 
-**Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, local validation scripts and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
+**Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, local validation scripts and Wrangler deployment. Refresh docs/24. Build a requirement-to-code matrix for every concept and route; classify reuse, defect, missing, owner-gated and verified. Reproduce critical defects. Find every provider call site. No duplicate foundations.
 
 **Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and local validation. The frontend Vite build must resolve the public Clerk key using docs/27. Runtime Pages vars do not modify an already-built bundle. Build and scan a production artifact from the exact approved commit, record its checksum/provenance, deploy the build to the `dayanexa` Pages project manually with Wrangler following docs/28, then verify the served bundle and Google auth flow. Local checks alone are not deployment proof. No unrelated Clerk changes.
 
@@ -129,6 +131,8 @@ Before manual release, install from lockfile and run `npm run check`, `npm run a
 
 ## Definition of done
 
+Apply the complete phase gates, chain invariants and evidence classifications in `docs/29-end-to-end-implementation-and-defect-resolution-contract.md`.
+
 Do not declare V3 complete until five engines run end-to-end; persistent clusters and validated demand exist; solution readiness is test-proven; agents execute scoped tools and durable tasks; a mission creates a tested private revocable demo; market consent/feedback links to demand; customer/contributor/operator/finance/owner journeys work; Admin Control Center is backed by secure APIs; all provider calls are quota/cost governed with compliant failover; economics reconcile; current HEAD local checks pass; production auth/deployment parity, backup/restore, monitoring, legal/privacy and owner approvals are proven.
 
 ## Reporting contract
@@ -156,3 +160,12 @@ Required release sequence:
 Do not run `npm run db:migrate:prod` or any production D1 migration as part of frontend deployment. The approval to deploy the frontend does not authorize D1 changes, Clerk dashboard/provider changes, secret creation/rotation, payment changes, billing changes, provider spend or data deletion. Keep the last known-good Pages deployment available for frontend rollback only; do not couple rollback to D1 data changes.
 
 Local validation is not proof of deployment. Wrangler reporting a successful upload is not proof that authentication works. Keep status **PRODUCTION DEPLOYMENT PENDING** until all production verification criteria pass.
+
+
+## Mandatory implementation closure
+
+Do not stop after Batch 0 audit or after writing a roadmap. Execute Phases 1–11 in docs/29 in dependency order, splitting into small reviewable source batches. Every batch must include real source changes when a safe implementation gap exists, focused regression tests, local validation and updated audit/status. If a phase is blocked by a missing provider credential, production secret, external account permission, payment merchant setup or owner-only production action, finish all safe code-side work, fail closed, document the exact blocker and continue with independent work.
+
+No placeholder success, fake live metrics, unconnected buttons, unbounded provider calls, mock production auth, unverified demand, simulated payment or invented earnings. Test the failure path as deliberately as the happy path. Keep the manual Wrangler-only release contract; do not restore GitHub Actions CI/CD.
+
+**Batch completion report:** exact before/after SHA; defect and root cause; source paths changed; migrations; tests/commands and exact results; provider usage/cost; browser/sandbox/production evidence; approvals and blockers; untested cases; next implementation batch. Never claim source, test, sandbox or production completion without its corresponding evidence.
