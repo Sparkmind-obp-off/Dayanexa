@@ -1,6 +1,6 @@
 # DAYANEXA — Master System / Full-Stack Implementation Prompt
 
-**Version:** 1.1 · **Updated:** 16 November 2026
+**Version:** 1.2 · **Updated:** 16 November 2026
 
 **Inference decision:** Cloudflare Workers AI via `env.AI` is the default; GroqCloud is optional and disabled by default.
 
@@ -44,6 +44,13 @@ DAYANEXA doctrine: **Discover demand. Build the capability. Deliver the outcome.
 7. **Report honestly.** Separate implemented, locally tested, CI-passed, sandbox-verified, production-configured and owner-blocked states.
 
 ## Clerk Production requirements
+
+### Clerk SDK compatibility
+- Migrate the browser app from deprecated `@clerk/clerk-react` to `@clerk/react` v6.18.0+ (Core 3 / Frontend API 2026-08-20); use Node.js >=20.9.0.
+- Keep `@clerk/backend` on compatible v2.33.9+ unless current official compatibility documentation requires otherwise. Do not assume a backend v3 package exists.
+- Replace `SignedIn`/`SignedOut` with `Show` and review all provider, sign-in, sign-up, redirect and appearance props against current React SDK docs.
+- Regenerate package lock and ensure no deprecated Clerk React package remains in resolved dependency tree.
+- A Git commit is not a production fix until the new client bundle is deployed and Google sign-in is tested on the canonical Production domain.
 Use the supported Clerk backend SDK and current official documentation. Configure Production instance, custom domain, exact redirect/authorized-party origins, session verification and webhook verification. Map Clerk subject to internal immutable DAYANEXA user ID. Never use email as primary key or trust client metadata for roles. Build account lifecycle sync and idempotent webhook processing. Test real Production sign-in and protected API before marking this gate complete. If production keys, dashboard access or domain verification are missing, implement the integration code and report the precise owner action; do not claim activation or silently use mock auth.
 
 ## Payment gateway requirements

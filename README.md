@@ -3,7 +3,7 @@
 Implementasi sesuai `docs/16-master-system-and-full-stack-implementation.md` (v1.1) dan `prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md`.
 
 ## Stack
-- **Frontend**: React 18 + TypeScript + Vite, React Router, TanStack Query, Clerk React Core 3 (`@clerk/react` 6.18.8; Production, **Google-only**), lucide icons, design system gelap kustom.
+- **Frontend**: React 18 + TypeScript + Vite, React Router, TanStack Query, Clerk React Core 3 (`@clerk/react` 6.18.0+; `@clerk/backend` compatible v2; Production, **Google-only**), lucide icons, design system gelap kustom.
 - **API**: Hono di Cloudflare Pages Functions (advanced mode, `dist/_worker.js`, `_routes.json` → `/api/*`).
 - **Data**: Cloudflare D1 (5 migrasi, 43 tabel, ledger double-entry immutable), R2 privat `dayanexa-private` untuk artefak (download bertanda tangan HMAC).
 - **AI**: Workers AI (`env.AI`) default — profil classification/extraction (Llama 3.1 8B fp8), reasoning/generation (Llama 3.3 70B fp8-fast), embeddings (bge-m3); budget neuron harian/bulanan, circuit breaker, validasi zod, `inference_traces`. Groq opsional, **nonaktif** default, tanpa fallback otomatis.
@@ -51,7 +51,7 @@ Secret lokal: salin `.dev.vars.example` → `.dev.vars`.
 5. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
 
 ## Status
-- Clerk SDK migration: Core 3 (`@clerk/react` 6.18.8 + `@clerk/backend` 3.29.0); production sign-in smoke test still required after deployment.
+- Clerk SDK migration: Core 3 (`@clerk/react` 6.18.0+; `@clerk/backend` compatible v2); production sign-in smoke test required after deployment.
 - CI workflow siap di `docs/ci/ci.workflow.yml` (salin ke `.github/workflows/ci.yml` — GitHub App belum punya izin `workflows`).
 - Typecheck ✅ · 18 unit test ✅ · migrasi ✅ · secret scan ✅ · build ✅
 - Production: https://dayanexa.pages.dev (D1 ✅, Workers AI ✅, R2 ✅, Clerk keys ✅)

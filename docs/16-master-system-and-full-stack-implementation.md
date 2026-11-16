@@ -1,7 +1,7 @@
 # DAYANEXA — Master System & Full-Stack Implementation Specification
 
 **Document type:** Canonical implementation contract  
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** 16 November 2026  
 **Status:** Approved architectural direction; implementation and production activation remain gated  
 **Repository:** `Sparkmind-obp-off/Dayanexa` · `main`  
@@ -158,6 +158,14 @@ Use opaque IDs, UTC timestamps, explicit currency/units, immutable provenance an
 Keep distinct scores: demand confidence, commercial potential, execution feasibility, strategic value and risk level. Expose evidence and rationale for scores.
 
 ## 6. Clerk Production — mandatory identity architecture
+
+### SDK compatibility baseline (Core 3)
+- Use the supported React package `@clerk/react` (not deprecated `@clerk/clerk-react`) at version `6.18.0` or newer for Frontend API `2026-08-20`.
+- Use Node.js `20.9.0` or newer for Clerk Core 3.
+- Keep `@clerk/backend` on the compatible Core 2 backend line (`2.33.9` or newer within major 2) unless the official compatibility guide explicitly requires a backend major migration. Do not blindly set a nonexistent backend v3 range.
+- Replace `SignedIn`/`SignedOut` with `Show when="signed-in"` / `Show when="signed-out"`; check all auth component imports and redirects against the Core 3 React API.
+- Rebuild the lockfile with the selected package manager after migration. Never commit a lockfile that still resolves deprecated `@clerk/clerk-react` or mismatches `package.json`.
+- Production acceptance requires the deployed bundle to load the new Clerk SDK; a source-only commit does not fix the live website.
 
 **Clerk Production is mandatory for the production user-authentication path.** A mock login, local-only user, hardcoded admin password or development Clerk instance is not an acceptable substitute for the production build.
 
