@@ -242,3 +242,7 @@ For each batch, implement code + migration + API + UI + permissions + tests + ob
 ## Required report
 
 State exact commit, changed files, schema/routes/UI, commands run, test counts, provider source and actual cost, browser/deployment proof, owner actions and remaining gaps. Distinguish source implementation, unit/integration tests, sandbox, production smoke and real customer validation.
+
+## Admin & Resource Control Center (mandatory)
+
+Read and implement `docs/25-admin-resource-control-center.md` as a first-class owner/operator workspace alongside the existing 14 workspaces. Include customer management, contributor management, provider registry, per-Actor registry and approvals, provider/Actor budgets, Cost & Usage Center, Cloudflare/CI operations visibility, and immutable audit. Do not build a display-only dashboard: every mutation requires server-side permission, validation, persistence, audit and tests. Provider budget/enablement changes are owner-controlled; no paid fallback or auto top-up. Secrets remain in Cloudflare/provider secret stores and must never be exposed to the browser. CI must reject tracked .env.production/.env.development files and must never delete production/customer/financial/audit data.
