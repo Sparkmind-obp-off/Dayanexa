@@ -11,6 +11,8 @@ Before writing or changing code, read:
 - `docs/16-master-system-and-full-stack-implementation.md`
 - `docs/00-product-constitution.md` through `docs/15-implementation-foundation.md`
 - `README.md`
+- `docs/17-master-upgrade-and-execution-roadmap.md`
+- the updated `docs/14-identity-monetization-and-payments.md`
 - the entire current source tree, package manifests, migrations, CI and environment examples.
 
 The master specification is the governing implementation contract. Do not ask the owner to repeat decisions already documented. Do not assume existing code or adapters are correct; audit them.

@@ -566,8 +566,9 @@ For each external dependency, report exact required owner action and the evidenc
 - `docs/11-implementation-blueprint.md`
 - `docs/12-mvp-acceptance.md`
 - `docs/13-provider-stack-and-cost-governance.md`
-- `docs/14-identity-monetization-and-payments.md`
+- `docs/14-identity-monetization-and-payments.md` (V2 monetization layers and payment architecture)
 - `docs/15-implementation-foundation.md`
+- `docs/17-master-upgrade-and-execution-roadmap.md`
 - `apps/api/README.md`
 
 ## 19. V2 decision log and owner constraints
