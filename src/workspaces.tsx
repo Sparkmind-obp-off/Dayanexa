@@ -363,6 +363,9 @@ export function AdminControl() {
   const users = useGet<any>("/users");
   const providers = useGet<any>("/providers");
   const benchmarks = useGet<any>("/discovery/benchmarks");
+  const policies = useGet<any>("/admin/provider-policies");
+  const accounts = useGet<any>("/admin/provider-accounts");
+  const actorRegistry = useGet<any>("/admin/actors");
   const ai = useGet<any>("/ai/status");
   const health = usePublic<any>("/health");
   const contributors = (users.data?.items ?? []).filter((u: any) => u.contributor);
@@ -373,7 +376,7 @@ export function AdminControl() {
   const actorItems = benchmarks.data?.items ?? [];
   return <div className="stack">
     <div className="alert warn small">Pusat kontrol administratif. Data dan tindakan dibatasi oleh izin owner. Perubahan provider, budget, Actor, dan infrastruktur belum dapat dilakukan dari dashboard sampai policy API persisten selesai dibangun.</div>
-    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Actor", "Cloudflare & CI"]} value={tab} onChange={setTab} />
+    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Akun provider", "Actor", "Actor registry", "Cloudflare & CI"]} value={tab} onChange={setTab} />
     {tab === "Ringkasan" && <div className="stack">
       <div className="grid g4">
         <Stat label="Organisasi pelanggan" value={customerItems.length} note="Organisasi tercatat di D1" />
@@ -421,6 +424,62 @@ export function AdminControl() {
         ]} />}</Q>
       </Section>
       <p className="small"><Link to="/app/w/learning">Lihat analitik provider</Link> · <Link to="/app/w/ledger">Lihat biaya langsung dan ledger misi</Link></p>
+    </div>}
+    {tab === "Akun provider" && <div className="stack">
+      <div className="alert warn small">Profil akun hanya menyimpan nama binding secret, bukan token. Token wajib ditambahkan melalui Cloudflare Worker/Pages Secrets. Rotasi akun hanya untuk akun yang sah dan sesuai ketentuan provider; bukan untuk menghindari limit atau kuota gratis.</div>
+      <NewPanel title="+ Daftarkan akun provider yang diotorisasi" fields={[
+        {name:"providerId",label:"Provider",type:"select",options:[{value:"apify",label:"Apify"},{value:"scrapely",label:"Scrape.ly"},{value:"tavily",label:"Tavily"},{value:"firecrawl",label:"Firecrawl"},{value:"groq",label:"Groq"}]},
+        {name:"label",label:"Nama akun/workspace",required:true},
+        {name:"secretBinding",label:"Nama binding secret",type:"select",options:["APIFY_API_TOKEN","APIFY_API_TOKEN_2","APIFY_API_TOKEN_3","SCRAPELY_API_KEY","SCRAPELY_API_KEY_2","SCRAPELY_API_KEY_3","TAVILY_API_KEY","TAVILY_API_KEY_2","FIRECRAWL_API_KEY","FIRECRAWL_API_KEY_2","GROQ_API_KEY","GROQ_API_KEY_2"].map(x=>({value:x,label:x}))},
+        {name:"ownershipStatus",label:"Otorisasi",type:"select",options:[{value:"pending",label:"Menunggu verifikasi"},{value:"authorized",label:"Diotorisasi"},{value:"revoked",label:"Dicabut"}]},
+        {name:"accountStatus",label:"Status",type:"select",options:[{value:"paused",label:"Jeda"},{value:"active",label:"Aktif"},{value:"exhausted",label:"Kuota habis"},{value:"disabled",label:"Nonaktif"}]},
+        {name:"planName",label:"Paket provider",defaultValue:"free"},
+        {name:"billingMode",label:"Model tagihan",type:"select",options:[{value:"free",label:"Gratis"},{value:"prepaid",label:"Prepaid"},{value:"subscription",label:"Langganan"},{value:"payg",label:"Pay as you go"}]},
+        {name:"dailyUnitCap",label:"Batas unit harian",type:"number",defaultValue:0},
+        {name:"monthlyUnitCap",label:"Batas unit bulanan",type:"number",defaultValue:0},
+        {name:"dailyCostUsdMicros",label:"Batas biaya harian (USD micros)",type:"number",defaultValue:0},
+        {name:"monthlyCostUsdMicros",label:"Batas biaya bulanan (USD micros)",type:"number",defaultValue:0},
+        {name:"termsReviewedAt",label:"Tanggal review terms (ISO)",placeholder:"2026-11-16T00:00:00Z"},
+        {name:"notes",label:"Catatan",type:"textarea"}
+      ]} submit={(v)=>post(api,"/admin/provider-accounts",v).then(()=>accounts.refetch())} />
+      <Section title="Akun provider terdaftar" sub="Metadata akun dan kapasitas yang dicatat owner. Ketersediaan token belum diverifikasi otomatis.">
+        <Q q={accounts}>{d=><Table rows={d.items} empty="Belum ada akun provider" cols={[
+          {h:"Provider / akun",r:(x:any)=><div><b>{x.provider_id} · {x.label}</b><div className="small dim">{x.secret_binding}</div></div>},
+          {h:"Otorisasi",r:(x:any)=><Badge v={x.ownership_status}/>},{h:"Status",r:(x:any)=><Badge v={x.account_status}/>},
+          {h:"Paket",r:(x:any)=>x.plan_name},{h:"Tagihan",r:(x:any)=>x.billing_mode},
+          {h:"Cap unit H/B",r:(x:any)=>`${x.daily_unit_cap}/${x.monthly_unit_cap}`},
+          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"active"}).then(()=>accounts.refetch())}>Aktifkan</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"paused"}).then(()=>accounts.refetch())}>Jeda</ActionButton></div>}
+        ]}/>}</Q>
+      </Section>
+    </div>}
+    {tab === "Actor registry" && <div className="stack">
+      <div className="alert warn small">Actor baru berstatus draft. Hanya Actor yang telah ditinjau terms, privasi, input schema, harga dan batas run yang boleh disetujui. Persetujuan registry belum otomatis mengaktifkan jalur eksekusi produksi.</div>
+      <NewPanel title="+ Daftarkan Actor" fields={[
+        {name:"providerId",label:"Provider",type:"select",options:[{value:"apify",label:"Apify"},{value:"scrapely",label:"Scrape.ly"}]},
+        {name:"actorId",label:"Actor ID (username~actor)",required:true},
+        {name:"displayName",label:"Nama Actor",required:true},
+        {name:"sourcePlatform",label:"Platform sumber",required:true},
+        {name:"purpose",label:"Tujuan",type:"textarea",required:true},
+        {name:"inputSchema",label:"Input schema JSON",type:"textarea",defaultValue:"{}"},
+        {name:"outputMapping",label:"Output mapping JSON",type:"textarea",defaultValue:"{}"},
+        {name:"pricingModel",label:"Model harga",defaultValue:"unknown"},
+        {name:"termsReviewedAt",label:"Tanggal review terms (ISO)"},
+        {name:"privacyReviewedAt",label:"Tanggal review privasi (ISO)"},
+        {name:"perRunCostUsdMicros",label:"Cap biaya per run (USD micros)",type:"number",defaultValue:0},
+        {name:"dailyCostUsdMicros",label:"Cap biaya harian (USD micros)",type:"number",defaultValue:0},
+        {name:"monthlyCostUsdMicros",label:"Cap biaya bulanan (USD micros)",type:"number",defaultValue:0},
+        {name:"maxItems",label:"Maksimum item",type:"number",defaultValue:10},
+        {name:"timeoutSeconds",label:"Timeout detik",type:"number",defaultValue:120},
+        {name:"concurrencyLimit",label:"Concurrency",type:"number",defaultValue:1}
+      ]} submit={(v)=>post(api,"/admin/actors",{...v,inputSchema:JSON.parse(v.inputSchema||"{}"),outputMapping:JSON.parse(v.outputMapping||"{}")}).then(()=>actorRegistry.refetch())}/>
+      <Section title="Registry Actor" sub="Status draft/review/approved/paused/rejected disimpan persisten di D1.">
+        <Q q={actorRegistry}>{d=><Table rows={d.items} empty="Belum ada Actor terdaftar" cols={[
+          {h:"Actor",r:(x:any)=><div><b>{x.display_name}</b><div className="small mono">{x.provider_id}/{x.actor_id}</div></div>},
+          {h:"Sumber",r:(x:any)=>x.source_platform},{h:"Status",r:(x:any)=><Badge v={x.status}/>},
+          {h:"Batas run",r:(x:any)=>x.max_items},{h:"Biaya/run",r:(x:any)=>usd(x.per_run_cost_usd_micros)},
+          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/actors/${x.id}`,{status:"review"}).then(()=>actorRegistry.refetch())}>Review</ActionButton><ActionButton run={()=>patch(api,`/admin/actors/${x.id}`,{status:"approved"}).then(()=>actorRegistry.refetch())}>Setujui</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/actors/${x.id}`,{status:"paused"}).then(()=>actorRegistry.refetch())}>Jeda</ActionButton></div>}
+        ]}/>}</Q>
+      </Section>
     </div>}
     {tab === "Actor" && <Section title="Riwayat Actor Apify / Scrape.ly" sub="Riwayat benchmark saat ini. Registry Actor yang dapat diedit, schema input, review terms dan budget per Actor menjadi implementasi berikutnya.">
       <Q q={benchmarks}>{(d) => <Table rows={d.items} empty="Belum ada benchmark Actor" cols={[
