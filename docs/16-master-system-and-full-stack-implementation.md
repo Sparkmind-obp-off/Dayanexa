@@ -655,3 +655,21 @@ V3 is complete only when each engine passes its own code, schema, UI, permission
 ## 29. Admin & Resource Control Center
 
 The canonical owner/operator control plane is specified in `docs/25-admin-resource-control-center.md`. It adds an administrative workspace alongside the existing 14 workspaces for customer management, contributor management, provider and Actor registry, cost/usage governance, Cloudflare operations visibility, approvals and audit. Provider policies must be persisted and enforced server-side; the dashboard must never expose secrets or imply control over Cloudflare billing. The CI workflow is retained, must reject tracked production/development .env files, and must never perform destructive production data cleanup. The Admin Control Center is incomplete until API, schema, UI, role enforcement, tests and operational evidence all exist.
+
+
+## 30. Provider Runtime Governance & Account Failover
+
+The Provider Registry and Actor Registry are runtime control-plane policy, not passive inventory. The canonical detailed contract is [docs/26-provider-runtime-governance.md](26-provider-runtime-governance.md).
+
+Mandatory invariants:
+- All Workers AI, Groq, Tavily, Firecrawl, Apify and Scrape.ly calls—including API, queue, scheduled and agent-tool paths—must pass through one server-side Provider Runtime Gateway.
+- Before every external call: verify provider/account activation, credential reference, terms/permission, capability, environment, quota snapshot freshness, provider rate limit, DAYANEXA per-request/daily/monthly cap and mission budget; atomically reserve maximum expected usage/cost.
+- Reconcile actual units/cost after execution and release unused reservation. Unknown provider-side completion is not blindly retried; preserve the reservation and reconcile first.
+- Provider plan quota, provider rate limits, DAYANEXA caps, mission budgets and account billing/paid state are distinct dimensions with independent units and reset windows.
+- If quota is exhausted, pause that provider/account for the affected capability/window and stop before dispatch. Resume only after a verified reset or authorized policy change.
+- Account alternatives are allowed only through an explicit owner-approved, source/task-specific, terms-compliant fallback allowlist. Never rotate accounts to evade rate limits, bans, suspension, free-tier/trial restrictions, billing controls or terms.
+- Unknown or stale quota/pricing fails closed for automated execution. No invented free credits. Paid use, overage, top-up, paid fallback and third-party billing remain disabled unless the owner approves exact scope, account, cap and period.
+- Credentials stay in server-side secret stores. The browser sees status and masked references only.
+- Persist account-level quota snapshots, reservations, usage events, reconciliation, fallback decisions and audit events with provenance and idempotency.
+
+Do not mark this feature complete from a registry CRUD screen. Completion requires adapter call-site inventory, additive D1 schema, server-side gateway, atomic budget reservation, adapter integration, owner-only controls, cost reconciliation, observability and CI tests proving caps, fail-closed behavior, compliant fallback, no limit evasion and no paid use without approval. Production migrations, secret changes, provider activation and deployment remain owner-approval gated.
