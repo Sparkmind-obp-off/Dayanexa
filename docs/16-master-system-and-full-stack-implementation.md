@@ -511,62 +511,6 @@ Work:
 
 **Exit gate:** a limited pilot completes repeated, evidence-backed, paid, accepted missions with reconciled economics, safe contributor settlement, controlled risk and no fabricated metrics. Wider launch requires an explicit owner go/no-go.
 
-## 19. Global Definition of Done
-
-### Phase 0 — Audit and system lock
-- Audit every repository file, current code, CI, dependency, migration and deployment.
-- Compare against this spec and existing docs.
-- Identify broken, unsafe, duplicated and placeholder behavior.
-- Produce architecture map, risk register, migration plan and implementation backlog.
-**Exit:** owner can review the baseline; no unverified claim.
-
-### Phase 1 — Production foundation
-- Complete frontend routing/layout and Hono API boundaries.
-- D1 schema, migrations, repository/service layer, R2 private storage.
-- Clerk Production integration and DAYANEXA authorization.
-- Audit log, rate limits, config/secrets and environment separation.
-**Exit:** real Production sign-in and protected API tests pass; role/tenant isolation tests pass.
-
-### Phase 2 — Market intelligence
-- Provider registry and cost governor.
-- Cloudflare Workers AI adapter through `env.AI`, task-profile/model registry, deterministic mock, budget/rate governor and low-volume integration smoke test.
-- Optional GroqCloud adapter behind an explicit disabled-by-default feature flag; no Groq secret is required for baseline deployment.
-- Tavily and Firecrawl adapters.
-- Apify and Scrape.ly benchmark harness and selected adapter.
-- Provenance, source permissions, evidence store and demand validation.
-**Exit:** reproducible evidence pipeline with cost/provenance and no fabricated demand.
-
-### Phase 3 — Opportunity and capability
-- Opportunity assessment and scoring.
-- Solution design, catalog, capability inventory and gap resolution plans.
-- Human/agent resource selection.
-**Exit:** an evidence-backed opportunity can be assessed and translated into an executable solution.
-
-### Phase 4 — Agentic execution
-- Mission/task workflow, queue/workflow orchestration, agent/tool registry.
-- Human approval gates, budget caps, retries, cancellation, quality review.
-- R2 artifacts and secure delivery.
-**Exit:** end-to-end mission can execute in controlled sandbox with trace and cost.
-
-### Phase 5 — Commercialization and payments
-- Offers, quotes, contracts, checkout, subscriptions/usage model as selected.
-- All four payment adapters; provider capability flags and sandbox contract tests.
-- Webhook verification, reconciliation, refund and double-entry ledger.
-- Single-merchant pilot first; split/payout only after eligibility and legal approval.
-**Exit:** payment and settlement are independently reconciled and ledger balances.
-
-### Phase 6 — Full command center
-- Complete 14 workspaces bound to live APIs.
-- Customer/contributor portals, notifications, reports and governance.
-- Operational dashboards with genuine data only.
-**Exit:** user roles can complete their authorized end-to-end journeys.
-
-### Phase 7 — Limited pilot and scale
-- Pilot with controlled users and limits.
-- Monitor VER, acceptance, payment success, margin, cost per outcome, disputes and reliability.
-- Expand providers/features only based on measured demand.
-**Exit:** repeatable positive economics and safe operations.
-
 ## 15. Global Definition of Done
 
 A feature is not done because a screen exists or a commit was made. It is done only when:
@@ -582,9 +526,9 @@ A feature is not done because a screen exists or a commit was made. It is done o
 - No fake data is represented as live.
 - Owner approval is obtained for production, payments and external commitments.
 
-## 20. Current repository state — verified baseline 16 Nov 2026
+## 16. Current repository state — verified baseline 16 Nov 2026
 
-The repository currently contains a React/Vite application, Hono API bundle, five D1 migrations, Workers AI binding, R2 binding, Clerk Core 3 source migration, pricing/plan routes, customer UI and four payment adapter files. Their presence is not proof of production operation. The latest inspected Pages deployment was ad-hoc, the Pages project API returned no connected Git source, and its deployed commit was older than the Clerk migration. The package lockfile was absent from the inspected main tree after the SDK update and must be regenerated and committed before CI can use a reproducible clean install. Real Google sign-in, Clerk webhook, payment gateway sandbox/live, contributor payout and complete end-to-end customer journeys remain unverified.
+The repository currently contains a React/Vite application, Hono API bundle, five D1 migrations, Workers AI binding, R2 binding, Clerk Core 3 source migration, pricing/plan routes, customer UI and four payment adapter files. Their presence is not proof of production operation. The latest inspected Pages deployment was ad-hoc, the Pages project API returned no connected Git source, and its deployed commit was older than the Clerk migration. The package lockfile was absent from the inspected main tree after the SDK update and must be regenerated and committed before CI can use a reproducible clean install. Real Google sign-in, Clerk webhook, payment gateway sandbox/live, contributor payout and complete end-to-end customer journeys remain unverified. The connected Clerk workspaces inspected during this update did not expose an application whose Production publishable key matches the DAYANEXA domain; do not modify the unrelated Oltavyn/Runner/other Clerk instances. The DAYANEXA Clerk instance must be accessed through its correct authorized workspace before configuration can be verified or changed.
 
 The next implementation agent must audit these artifacts first:
 - `src/App.tsx`, `src/main.tsx`, `src/styles.css`
@@ -594,7 +538,7 @@ The next implementation agent must audit these artifacts first:
 
 Do not simply add more code on top of unverified adapters. Verify official API specs and signature examples for each gateway; fix mismatches and create provider-specific contract tests. In particular, merchant-specific Faspay endpoints/channels and each provider's webhook verification must be confirmed against the actual merchant product and sandbox.
 
-## 21. Owner-controlled activation checklist
+## 17. Owner-controlled activation checklist
 
 The implementation agent may prepare code, migrations, tests and setup instructions. It must not claim or perform the following without actual account access, required details and owner approval:
 - Create or alter Clerk Production instance, domain, OAuth providers or production keys.
@@ -606,7 +550,7 @@ The implementation agent may prepare code, migrations, tests and setup instructi
 
 For each external dependency, report exact required owner action and the evidence needed to mark it ready.
 
-## 22. Canonical related documents
+## 18. Canonical related documents
 
 - `docs/00-product-constitution.md`
 - `docs/01-master-architecture.md`
@@ -626,7 +570,7 @@ For each external dependency, report exact required owner action and the evidenc
 - `docs/15-implementation-foundation.md`
 - `apps/api/README.md`
 
-## 23. V2 decision log and owner constraints
+## 19. V2 decision log and owner constraints
 - Canonical brand/product remains DAYANEXA; repo `Sparkmind-obp-off/Dayanexa`, branch `main`.
 - Genspark is not a required build or execution dependency. Implementation must be executable through the repository, Cloudflare, GitHub and verified provider interfaces.
 - Google-only Clerk Production remains the selected identity policy.
