@@ -8,7 +8,7 @@ Implement the existing DAYANEXA codebase through V3 as specified in `docs/00-DAY
 
 Repository: `Sparkmind-obp-off/Dayanexa`; branch `main`; domain `dayanexa.biz.id`.
 
-Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, current source, migrations, tests, CI and deployment configuration. Refresh the dated code audit against current HEAD before implementation.
+Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, docs/27, current source, migrations, tests, CI and deployment configuration. Refresh the dated code audit against current HEAD before implementation.
 
 ## Product and absolute rules
 
@@ -97,7 +97,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 **Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, CI and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
 
-**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and current CI. No unrelated Clerk changes.
+**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and current CI. The frontend Vite build must resolve the public Clerk key using the canonical build contract in docs/27; runtime Pages vars do not modify an already-built bundle. Verify the actual deployed JS bundle and Google auth flow. No unrelated Clerk changes.
 
 **Batch 2 — Customer/contributor/operator journeys:** complete flows and server-side permissions; expand cross-tenant tests across nested IDs, joins, artifacts and background jobs.
 
