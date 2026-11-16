@@ -1,3 +1,5 @@
+> **Canonical authority:** Follow [DAYANEXA Canonical Master System](00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md) and [Full Implementation Master Prompt](../prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md) for product scope, status, phase order and end-to-end acceptance. This document remains the detailed technical/domain contract; extend existing code and do not restart the project.
+
 # DAYANEXA V3 — Master System & Full-Stack Implementation Specification
 
 **Version:** 3.0 · **Canonical architecture:** Demand-to-Execution · **Updated:** 16 November 2026
