@@ -12,8 +12,8 @@
   // Private artifact storage. Objects are never public; delivery uses short-lived signed links.
   "r2_buckets": [{ "binding": "ARTIFACTS", "bucket_name": "dayanexa-private" }],
 
-  // D1 (DB) — BLOCKED: the account is at its D1 database limit (Workers Free). Owner action required;
-  // then run scripts/activate-d1.sh which creates dayanexa-production, inserts the binding here and applies migrations.
+
+  "d1_databases": [{ "binding": "DB", "database_name": "dayanexa-production", "database_id": "40ba9edb-c9ed-4d85-8587-17b19ac693a7", "migrations_dir": "apps/api/migrations" }],
 
   "vars": {
     "APP_ENV": "production",
