@@ -1,3 +1,5 @@
+> **Canonical prompt:** For complete V3 end-to-end scope and execution, use [DAYANEXA Full Implementation Master Prompt](DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md) with [Canonical Master System](../docs/00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md). This legacy prompt is retained for backward compatibility and must not override the canonical package.
+
 # DAYANEXA V3 — Master System / Full-Stack Implementation Prompt
 
 **Version:** 3.0 · Demand-to-Execution Architecture
