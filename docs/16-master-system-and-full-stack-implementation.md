@@ -342,7 +342,7 @@ External commercial commitments, customer-facing price changes, provider spend/t
 
 Environments: local, preview/staging, production. Each has separate Clerk instance/keys, payment credentials, provider credentials, D1, R2 buckets, webhook URLs, allowed origins and budgets.
 
-CI must run:
+Local verification must run:
 1. Dependency install and lockfile validation.
 2. Formatting/lint.
 3. Frontend typecheck and production build.
@@ -525,14 +525,14 @@ A feature is not done because a screen exists or a commit was made. It is done o
 - Loading/empty/error/retry states work.
 - Idempotency, abuse limits, privacy and failure paths are covered.
 - Cost and operational metrics are captured.
-- CI passes and deployment smoke tests pass.
+- Local checks pass and production deployment smoke tests pass.
 - Documentation and runbooks are updated.
 - No fake data is represented as live.
 - Owner approval is obtained for production, payments and external commitments.
 
 ## 16. Current repository state — verified baseline 16 Nov 2026
 
-The repository currently contains a React/Vite application, Hono API bundle, five D1 migrations, Workers AI binding, R2 binding, Clerk Core 3 source migration, pricing/plan routes, customer UI and four payment adapter files. Their presence is not proof of production operation. The latest inspected Pages deployment was ad-hoc, the Pages project API returned no connected Git source, and its deployed commit was older than the Clerk migration. The package lockfile was absent from the inspected main tree after the SDK update and must be regenerated and committed before CI can use a reproducible clean install. Real Google sign-in, Clerk webhook, payment gateway sandbox/live, contributor payout and complete end-to-end customer journeys remain unverified. The connected Clerk workspaces inspected during this update did not expose an application whose Production publishable key matches the DAYANEXA domain; do not modify the unrelated Oltavyn/Runner/other Clerk instances. The DAYANEXA Clerk instance must be accessed through its correct authorized workspace before configuration can be verified or changed.
+The repository currently contains a React/Vite application, Hono API bundle, five D1 migrations, Workers AI binding, R2 binding, Clerk Core 3 source migration, pricing/plan routes, customer UI and four payment adapter files. Their presence is not proof of production operation. The latest inspected Pages deployment was ad-hoc, the Pages project API returned no connected Git source, and its deployed commit was older than the Clerk migration. The package lockfile was absent from the inspected main tree after the SDK update and must be regenerated and committed before a reproducible local clean install. Real Google sign-in, Clerk webhook, payment gateway sandbox/live, contributor payout and complete end-to-end customer journeys remain unverified. The connected Clerk workspaces inspected during this update did not expose an application whose Production publishable key matches the DAYANEXA domain; do not modify the unrelated Oltavyn/Runner/other Clerk instances. The DAYANEXA Clerk instance must be accessed through its correct authorized workspace before configuration can be verified or changed.
 
 The next implementation agent must audit these artifacts first:
 - `src/App.tsx`, `src/main.tsx`, `src/styles.css`
@@ -674,4 +674,4 @@ Mandatory invariants:
 - Credentials stay in server-side secret stores. The browser sees status and masked references only.
 - Persist account-level quota snapshots, reservations, usage events, reconciliation, fallback decisions and audit events with provenance and idempotency.
 
-Do not mark this feature complete from a registry CRUD screen. Completion requires adapter call-site inventory, additive D1 schema, server-side gateway, atomic budget reservation, adapter integration, owner-only controls, cost reconciliation, observability and CI tests proving caps, fail-closed behavior, compliant fallback, no limit evasion and no paid use without approval. Production migrations, secret changes, provider activation and deployment remain owner-approval gated.
+Do not mark this feature complete from a registry CRUD screen. Completion requires adapter call-site inventory, additive D1 schema, server-side gateway, atomic budget reservation, adapter integration, owner-only controls, cost reconciliation, observability and automated tests proving caps, fail-closed behavior, compliant fallback, no limit evasion and no paid use without approval. Production migrations, secret changes, provider activation and deployment remain owner-approval gated.
