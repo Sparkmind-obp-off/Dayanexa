@@ -26,9 +26,18 @@ No secrets in source/browser/logs/prompts/Git. Keep .env.example; prohibit .env.
 
 Production D1 migrations, secrets, provider activation, paid use, external account connection, external contact, public demo, live payment, refund, payout and deployment require explicit owner approval. No silent paid fallback, overage, top-up, subscription, proxy spend or billing-plan changes. Never rotate accounts to evade rate limits, 429, bans, suspension, trial/free-tier restrictions or terms. Unknown/stale quota, price, authorization or source permission fails closed. UI/CRUD/docs/mocks/historical CI runs are not proof.
 
-## Explicit non-goal: do not turn this implementation into a member-role change
+## Critical account-access requirement: member gets V3 product access without staff elevation
 
-The user has clarified that the requested work is not about changing their account from `member`, changing platform roles, changing bootstrap ownership, or editing account records. Do not mutate role or membership data and do not spend implementation batches on the role label. Audit identity/access only as a required security dependency for V3 (authorization, tenant isolation, least privilege, and protected operations). The actual objective is to implement and verify the complete Demand-to-Execution product, all five engines, the 10 domains, the 15 workspaces, provider governance, durable workflows, market delivery and verified economics. A role-label change is never evidence of V3 completion.
+Keep `sparkmind.support@gmail.com` as platform owner. Keep ordinary accounts such as `elmatador0197@gmail.com` at their existing `member` platform role. Do not promote or mutate roles as a shortcut. The requested implementation explicitly includes enabling the complete customer-usable DAYANEXA V3 product for member accounts under the Free plan.
+
+Separate:
+- platform role and global authority;
+- active organization membership and tenant data scope;
+- product-plan entitlements and usage quotas.
+
+Implement a dedicated customer product permission (e.g. `v3:use`) and member-facing tenant-safe V3 workspaces/APIs. Never grant `workspace:read` to a member merely to reveal internal workspaces: it currently has staff/cross-tenant semantics. Never let product entitlement bypass tenant ownership. Member accounts must be able to use the five V3 engines and all customer-usable product capabilities, with Free-plan limits and no paid spend. Owner-only Admin & Resource Control, global provider/Actor configuration, cross-tenant operations, secret/budget/payment configuration and global audit remain protected. Pro/Plus may increase quotas/service levels but are not prerequisites for basic access to the core V3 product.
+
+Keep AI/agent execution on Free within a verified no-cost provider allowance and hard budget cap. If no eligible free allowance exists, defer that operation transparently; never charge, overage, top up or silently fall back to paid resources. Do not edit the named accounts' identity or role records to achieve product access.
 
 ## System architecture
 
