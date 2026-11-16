@@ -1,0 +1,327 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { dt, idr, useApi, useGet } from "./lib/api";
+import { useSession } from "./lib/session";
+import { Form, type FieldDef } from "./components/Form";
+import { ActionButton, Badge, Q, Section, Stat, Table, Tabs, short } from "./components/ui";
+
+const post = (api: ReturnType<typeof useApi>, path: string, json: unknown = {}) => api(path, { method: "POST", json });
+const patch = (api: ReturnType<typeof useApi>, path: string, json: unknown) => api(path, { method: "PATCH", json });
+function NewPanel({ title, fields, submit, label = "Simpan", perm }: { title: string; fields: FieldDef[]; submit: (v: any) => Promise<unknown>; label?: string; perm?: string }) {
+  const { can } = useSession();
+  if (perm && !can(perm)) return null;
+  return <details className="card"><summary>{title}</summary><div style={{ marginTop: 14 }}><Form fields={fields} submit={submit} label={label} /></div></details>;
+}
+const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${v}`);
+
+// 1. Executive Command
+export function Executive() {
+  const q = useGet<any>("/metrics/executive", { refetchInterval: 60_000 });
+  return <Q q={q}>{(m) => <div className="stack" style={{ gap: 18 }}>
+    <div className="grid g4">
+      <Stat label="Verified Economic Resolution" value={m.northStar.verifiedEconomicResolutions} note={m.northStar.definition} />
+      <Stat label="Pendapatan terverifikasi" value={idr(m.verifiedRevenueMinor)} note="Hanya dari jurnal ledger yang diposting" />
+      <Stat label="Demand tervalidasi" value={m.pipeline.validatedDemand} note={`${m.pipeline.demandHypotheses} hipotesis menunggu`} />
+      <Stat label="Misi aktif" value={m.pipeline.activeMissions} note={`${m.pipeline.awaitingAcceptance} menunggu penerimaan`} />
+    </div>
+    <div className="grid g3">
+      <div className="card"><h3>Perlu perhatian</h3><dl className="kv"><dt>Persetujuan tertunda</dt><dd><Link to="/app/w/governance">{m.attention.pendingApprovals}</Link></dd><dt>Sengketa terbuka</dt><dd>{m.attention.openDisputes}</dd><dt>Rekonsiliasi pembayaran</dt><dd><Link to="/app/w/ledger">{m.attention.paymentsNeedingReconciliation}</Link></dd></dl></div>
+      <div className="card"><h3>Pipeline</h3><dl className="kv"><dt>Sinyal</dt><dd>{m.pipeline.signals}</dd><dt>Hipotesis</dt><dd>{m.pipeline.demandHypotheses}</dd><dt>Peluang terbuka</dt><dd>{m.pipeline.openOpportunities}</dd></dl></div>
+      <div className="card"><h3>Integritas</h3><dl className="kv"><dt>Intent mock</dt><dd>{m.integrity.mockPaymentIntents} (dikecualikan dari pendapatan)</dd><dt>Trial balance</dt><dd>{m.integrity.ledger.balanced ? <Badge v="success" /> : <Badge v="failure" />} D {idr(m.integrity.ledger.debits)} / K {idr(m.integrity.ledger.credits)}</dd></dl></div>
+    </div>
+    <Section title="Funnel misi"><Table rows={m.missionFunnel} empty="Belum ada misi" cols={[{ h: "Status", r: (r: any) => <Badge v={r.status} /> }, { h: "Jumlah", r: (r: any) => r.n }]} /></Section>
+    <div className="small dim">Per {dt(m.asOf)} · dihitung langsung dari catatan kanonik, tanpa angka placeholder.</div>
+  </div>}</Q>;
+}
+
+// 2. Market Radar
+export function MarketRadar() {
+  const api = useApi();
+  const [tab, setTab] = useState("Sinyal");
+  const signals = useGet<any>("/signals?limit=100");
+  const sources = useGet<any>("/sources");
+  const providers = useGet<any>("/providers");
+  return <div>
+    <Tabs tabs={["Sinyal", "Discovery", "Sumber", "Provider"]} value={tab} onChange={setTab} />
+    {tab === "Sinyal" && <><NewPanel perm="intel:write" title="+ Catat sinyal manual" fields={[{ name: "title", label: "Judul", required: true }, { name: "url", label: "URL sumber", type: "url" }, { name: "content", label: "Isi / kutipan", type: "textarea", required: true }]} submit={(v) => post(api, "/signals", v).then(() => signals.refetch())} />
+      <div className="alert small" style={{ margin: "12px 0" }}>Sinyal adalah observasi, bukan bukti demand. Klasifikasi AI (Workers AI) adalah inferensi.</div>
+      <Q q={signals}>{(d) => <Table rows={d.items} empty="Belum ada sinyal" cols={[
+        { h: "Sinyal", r: (s: any) => <div><div>{s.title}</div>{s.url && <a className="small" href={s.url} target="_blank" rel="noreferrer">{s.url.slice(0, 60)}</a>}</div> },
+        { h: "Provider", r: (s: any) => <span className="small">{s.provider_id} · {s.collection_method}</span> }, { h: "Status", r: (s: any) => <Badge v={s.status} /> },
+        { h: "Klasifikasi AI", r: (s: any) => { const c = s.classification_json ? JSON.parse(s.classification_json) : null; return c ? <span className="small">{c.is_demand_signal ? "kebutuhan" : "bukan"} · {c.category} · {c.confidence}%</span> : <span className="dim">—</span>; } },
+        { h: "Ditangkap", r: (s: any) => <span className="small">{dt(s.captured_at)}</span> },
+        { h: "", r: (s: any) => <div className="row">{s.status !== "discarded" && <ActionButton run={() => post(api, `/signals/${s.id}/classify`).then(() => signals.refetch())}>Klasifikasi AI</ActionButton>}{s.status !== "discarded" && <ActionButton cls="btn ghost sm" run={() => post(api, `/signals/${s.id}/discard`).then(() => signals.refetch())}>Buang</ActionButton>}</div> },
+      ]} />}</Q></>}
+    {tab === "Discovery" && <div className="grid g2">
+      <div className="card"><h3>Pencarian (Tavily)</h3><p className="small muted">Batas kredit harian ditegakkan server. Tidak ada fallback berbayar.</p><Form label="Cari" fields={[{ name: "query", label: "Query", required: true, full: true, placeholder: "contoh: UMKM butuh aplikasi kasir offline" }, { name: "maxResults", label: "Maks hasil (1-10)", type: "number", defaultValue: 5 }, { name: "depth", label: "Kedalaman", type: "select", options: [{ value: "basic", label: "basic (1 kredit)" }, { value: "advanced", label: "advanced (2 kredit)" }] }]} submit={(v) => post(api, "/discovery/search", v)} successText="Selesai — sinyal baru ada di tab Sinyal." /></div>
+      <div className="card"><h3>Ekstraksi halaman (Firecrawl)</h3><p className="small muted">Hanya URL publik (proteksi SSRF). Hormati ketentuan situs.</p><Form label="Ekstrak" cols={1} fields={[{ name: "url", label: "URL", type: "url", required: true }]} submit={(v) => post(api, "/discovery/extract", v)} successText="Halaman diekstrak menjadi sinyal." /></div>
+      <div className="card" style={{ gridColumn: "1/-1" }}><h3>Koleksi spesifik (Apify / Scrape.ly)</h3><p className="small muted">Nonaktif secara default. Actor harus di-review & masuk allowlist pemilik; biaya dibatasi per run. Jalankan sebagai benchmark untuk memilih provider.</p>
+        <Form label="Jalankan" fields={[{ name: "provider", label: "Provider", type: "select", options: [{ value: "apify", label: "Apify" }, { value: "scrapely", label: "Scrape.ly" }] }, { name: "actorId", label: "Actor ID (user~actor)", required: true }, { name: "sourceLabel", label: "Label sumber", required: true }, { name: "maxItems", label: "Maks item", type: "number", defaultValue: 10 }, { name: "benchmark", label: "Jalankan sebagai benchmark", type: "checkbox", defaultValue: true }]} submit={(v) => post(api, "/discovery/actor-run", { ...v, input: {} })} /></div>
+    </div>}
+    {tab === "Sumber" && <><NewPanel perm="intel:write" title="+ Daftarkan sumber" fields={[{ name: "name", label: "Nama", required: true }, { name: "kind", label: "Jenis", type: "select", options: ["search", "website", "platform", "customer", "partner", "manual"].map((v) => ({ value: v, label: v })) }, { name: "baseUrl", label: "URL dasar", type: "url" }, { name: "termsNote", label: "Catatan ketentuan & izin penggunaan", type: "textarea", required: true }]} submit={(v) => post(api, "/sources", v).then(() => sources.refetch())} />
+      <div style={{ marginTop: 12 }}><Q q={sources}>{(d) => <Table rows={d.items} empty="Belum ada sumber" cols={[{ h: "Nama", r: (s: any) => s.name }, { h: "Jenis", r: (s: any) => s.kind }, { h: "Ketentuan", r: (s: any) => <span className="small clip">{s.terms_note}</span> }, { h: "Status", r: (s: any) => <Badge v={s.status} /> },
+        { h: "", r: (s: any) => <ActionButton run={() => patch(api, `/sources/${s.id}`, { status: s.status === "active" ? "paused" : "active" }).then(() => sources.refetch())}>{s.status === "active" ? "Jeda" : "Aktifkan"}</ActionButton> }]} />}</Q></div></>}
+    {tab === "Provider" && <Q q={providers}>{(d) => <>
+      <Table rows={d.providers} cols={[{ h: "Provider", r: (p: any) => <b>{p.id}</b> }, { h: "Layer", r: (p: any) => p.layer }, { h: "Peran", r: (p: any) => <span className="small">{p.role}</span> }, { h: "Konfigurasi", r: (p: any) => <Badge v={p.configured ? "success" : "pending"} /> }, { h: "Aktif", r: (p: any) => <Badge v={p.enabled ? "active" : "draft"} /> }, { h: "Mode", r: (p: any) => <span className="small">{p.mode}</span> }, { h: "Cap harian", r: (p: any) => p.dailyCap ?? "—" }, { h: "Fallback", r: (p: any) => <span className="small">{p.fallback}</span> }, { h: "Catatan", r: (p: any) => <span className="small dim">{p.notes}</span> }]} />
+      <Section title="Pemakaian 30 hari"><Table rows={d.usage} empty="Belum ada pemakaian" cols={[{ h: "Hari", r: (u: any) => u.day }, { h: "Provider", r: (u: any) => u.provider_id }, { h: "Status", r: (u: any) => <Badge v={u.status} /> }, { h: "Panggilan", r: (u: any) => u.calls }, { h: "Unit", r: (u: any) => `${u.units} ${u.unit_type}` }]} /></Section>
+    </>}</Q>}
+  </div>;
+}
+
+// 3. Demand Intelligence
+export function DemandIntel() {
+  const api = useApi();
+  const q = useGet<any>("/demands?limit=100");
+  const [open, setOpen] = useState<string | null>(null);
+  return <div className="stack">
+    <NewPanel perm="intel:write" title="+ Hipotesis demand baru (dari pasar)" fields={[{ name: "title", label: "Judul", required: true }, { name: "segment", label: "Segmen" }, { name: "problem", label: "Masalah", type: "textarea", required: true }, { name: "desiredOutcome", label: "Hasil diinginkan", type: "textarea" }, { name: "urgency", label: "Urgensi", type: "select", options: [{ value: "medium", label: "medium" }, { value: "low", label: "low" }, { value: "high", label: "high" }] }]} submit={(v) => post(api, "/demands", { ...v, signalIds: [] }).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada demand" cols={[
+      { h: "Demand", r: (x: any) => <button className="btn ghost sm" onClick={() => setOpen(open === x.id ? null : x.id)}>{x.title}</button> }, { h: "Asal", r: (x: any) => <Badge v={x.origin} /> }, { h: "Status", r: (x: any) => <Badge v={x.status} /> },
+      { h: "Bukti", r: (x: any) => <span className="small">+{x.supporting_evidence} / −{x.contradicting_evidence}</span> }, { h: "Confidence", r: (x: any) => pct(x.demand_confidence) }, { h: "Dibuat", r: (x: any) => <span className="small">{dt(x.created_at)}</span> }]} />}</Q>
+    {open && <DemandDetail id={open} onChange={() => q.refetch()} />}
+  </div>;
+}
+function DemandDetail({ id, onChange }: { id: string; onChange: () => void }) {
+  const api = useApi();
+  const q = useGet<any>(`/demands/${id}`);
+  const signals = useGet<any>("/signals?limit=100");
+  return <Q q={q}>{(d) => <div className="card stack">
+    <div className="row between"><h3>{d.demand.title}</h3><Badge v={d.demand.status} /></div><p className="pre muted" style={{ margin: 0 }}>{d.demand.problem}</p>
+    {d.demand.desired_outcome && <div className="small"><b>Hasil:</b> {d.demand.desired_outcome}</div>}
+    <Section title="Bukti"><Table rows={d.evidence} empty="Belum ada bukti" cols={[{ h: "Sikap", r: (e: any) => <Badge v={e.stance === "supports" ? "success" : "failure"} /> }, { h: "Sinyal", r: (e: any) => e.url ? <a href={e.url} target="_blank" rel="noreferrer">{e.title}</a> : e.title }, { h: "Catatan", r: (e: any) => e.note }, { h: "Provider", r: (e: any) => <span className="small">{e.provider_id}</span> }]} /></Section>
+    <div className="grid g2">
+      <div className="card"><h3>Tautkan bukti</h3><Form label="Tautkan" cols={1} fields={[{ name: "signalId", label: "Sinyal", type: "select", options: (signals.data?.items ?? []).filter((s: any) => s.status !== "discarded").map((s: any) => ({ value: s.id, label: s.title.slice(0, 70) })) }, { name: "stance", label: "Sikap", type: "select", options: [{ value: "supports", label: "Mendukung" }, { value: "contradicts", label: "Membantah" }] }, { name: "note", label: "Catatan", required: true }]} submit={(v) => post(api, `/demands/${id}/evidence`, v).then(() => { q.refetch(); onChange(); })} /></div>
+      <div className="card"><h3>Transisi status</h3><p className="small muted">Validasi butuh ≥2 bukti pendukung dari ≥2 sumber berbeda + confidence + alasan.</p><Form label="Terapkan" cols={1} fields={[{ name: "to", label: "Ke", type: "select", options: ["DEMAND_EVIDENCE_PENDING", "DEMAND_VALIDATED", "DEFERRED", "REJECTED"].map((v) => ({ value: v, label: v })) }, { name: "demandConfidence", label: "Confidence (0-100, untuk validasi)", type: "number" }, { name: "reason", label: "Alasan", type: "textarea", required: true }]} submit={(v) => post(api, `/demands/${id}/transition`, v).then(() => { q.refetch(); onChange(); })} /></div>
+    </div>
+    <Section title="Riwayat"><Table rows={d.transitions} cols={[{ h: "Dari", r: (t: any) => <Badge v={t.from_state} /> }, { h: "Ke", r: (t: any) => <Badge v={t.to_state} /> }, { h: "Alasan", r: (t: any) => t.reason }, { h: "Waktu", r: (t: any) => dt(t.created_at) }]} /></Section>
+  </div>}</Q>;
+}
+
+// 4. Opportunity Universe
+export function Opportunities() {
+  const api = useApi();
+  const q = useGet<any>("/opportunities?limit=100");
+  const demands = useGet<any>("/demands?limit=200");
+  const [open, setOpen] = useState<string | null>(null);
+  return <div className="stack">
+    <NewPanel perm="intel:write" title="+ Peluang dari demand tervalidasi" fields={[{ name: "demandId", label: "Demand tervalidasi", type: "select", options: (demands.data?.items ?? []).filter((x: any) => x.status === "DEMAND_VALIDATED").map((x: any) => ({ value: x.id, label: x.title })) }, { name: "title", label: "Judul", required: true }, { name: "summary", label: "Ringkasan", type: "textarea", required: true }]} submit={(v) => post(api, "/opportunities", v).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada peluang" cols={[{ h: "Peluang", r: (o: any) => <button className="btn ghost sm" onClick={() => setOpen(open === o.id ? null : o.id)}>{o.title}</button> }, { h: "Status", r: (o: any) => <Badge v={o.status} /> },
+      { h: "Demand / Komersial / Kelayakan / Strategis", r: (o: any) => <span className="mono small">{pct(o.demand_confidence)} / {pct(o.commercial_potential)} / {pct(o.execution_feasibility)} / {pct(o.strategic_value)}</span> }, { h: "Risiko", r: (o: any) => o.risk_level ? <Badge v={o.risk_level === "low" ? "success" : o.risk_level === "medium" ? "pending" : "failure"} /> : "—" }, { h: "Metode", r: (o: any) => <span className="small">{o.assessment_method ?? "—"}</span> }]} />}</Q>
+    {open && <OpportunityDetail id={open} onChange={() => q.refetch()} />}
+  </div>;
+}
+function OpportunityDetail({ id, onChange }: { id: string; onChange: () => void }) {
+  const api = useApi();
+  const q = useGet<any>(`/opportunities/${id}`);
+  const [draft, setDraft] = useState<any>(null);
+  const [key, setKey] = useState(0);
+  return <Q q={q}>{(d) => <div className="card stack">
+    <div className="row between"><h3>{d.opportunity.title}</h3><Badge v={d.opportunity.status} /></div><p className="muted" style={{ margin: 0 }}>{d.opportunity.summary}</p>
+    <div className="grid g2">
+      <div className="card"><div className="row between"><h3>Penilaian (5 dimensi terpisah)</h3><ActionButton run={async () => { const r = await post(api, `/opportunities/${id}/ai-assist`) as any; setDraft({ ...r.draft, traceId: r.traceId }); setKey((k) => k + 1); }}>Draft AI</ActionButton></div>
+        {draft && <div className="alert warn small">Draft Workers AI dimuat ke formulir. Wajib ditinjau manusia. Bukti kurang: {draft.missing_evidence?.join("; ") || "—"}</div>}
+        <Form key={key} label="Simpan penilaian" fields={[
+          { name: "demandConfidence", label: "Demand confidence", type: "number", required: true, defaultValue: draft?.demand_confidence ?? "" }, { name: "commercialPotential", label: "Potensi komersial", type: "number", required: true, defaultValue: draft?.commercial_potential ?? "" },
+          { name: "executionFeasibility", label: "Kelayakan eksekusi", type: "number", required: true, defaultValue: draft?.execution_feasibility ?? "" }, { name: "strategicValue", label: "Nilai strategis", type: "number", required: true, defaultValue: draft?.strategic_value ?? "" },
+          { name: "riskLevel", label: "Risiko", type: "select", options: ["low", "medium", "high", "critical"].map((v) => ({ value: v, label: v })), defaultValue: draft?.risk_level ?? "medium" }, { name: "rationale", label: "Alasan", type: "textarea", required: true, defaultValue: draft?.rationale ?? "" }]}
+          submit={(v) => post(api, `/opportunities/${id}/assessments`, { ...v, inferenceTraceId: draft?.traceId ?? null }).then(() => { setDraft(null); q.refetch(); onChange(); })} /></div>
+      <div className="card"><h3>Transisi</h3><Form label="Terapkan" cols={1} fields={[{ name: "to", label: "Ke", type: "select", options: ["SOLUTION_DESIGNED", "CAPABILITY_ASSESSMENT", "CAPABILITY_READY", "CAPABILITY_GAP_IDENTIFIED", "CAPABILITY_FORMATION_PLANNED", "COMMERCIAL_MODEL_DESIGNED", "OFFER_READY", "DEFERRED", "REJECTED", "CLOSED"].map((v) => ({ value: v, label: v })) }, { name: "reason", label: "Alasan", type: "textarea", required: true }]} submit={(v) => post(api, `/opportunities/${id}/transition`, v).then(() => { q.refetch(); onChange(); })} />
+        <h3 style={{ marginTop: 18 }}>Solusi baru</h3><Form label="Tambah solusi" cols={1} fields={[{ name: "title", label: "Judul", required: true }, { name: "kind", label: "Jenis", type: "select", options: ["service", "product", "software", "package", "managed_outcome", "partner"].map((v) => ({ value: v, label: v })) }, { name: "description", label: "Deskripsi", type: "textarea", required: true }, { name: "feasibilityNote", label: "Catatan kelayakan", type: "textarea" }]} submit={(v) => post(api, `/opportunities/${id}/solutions`, v).then(() => q.refetch())} /></div>
+    </div>
+    <Section title="Riwayat penilaian"><Table rows={d.assessments} empty="Belum dinilai" cols={[{ h: "D/K/E/S", r: (a: any) => <span className="mono small">{a.demand_confidence}/{a.commercial_potential}/{a.execution_feasibility}/{a.strategic_value}</span> }, { h: "Risiko", r: (a: any) => a.risk_level }, { h: "Metode", r: (a: any) => a.method }, { h: "Alasan", r: (a: any) => <span className="small">{a.rationale}</span> }, { h: "Waktu", r: (a: any) => dt(a.created_at) }]} /></Section>
+    <Section title="Solusi"><Table rows={d.solutions} empty="Belum ada solusi" cols={[{ h: "Solusi", r: (s: any) => s.title }, { h: "Jenis", r: (s: any) => s.kind }, { h: "Status", r: (s: any) => <Badge v={s.status} /> }]} /></Section>
+  </div>}</Q>;
+}
+
+// 5. Solution Studio
+export function Solutions() {
+  const api = useApi();
+  const q = useGet<any>("/solutions");
+  return <Q q={q}>{(d) => <div className="stack">
+    <Table rows={d.items} empty="Belum ada solusi — tambahkan dari Opportunity Universe" cols={[{ h: "Solusi", r: (s: any) => <div><b>{s.title}</b><div className="small muted clip">{s.description}</div></div> }, { h: "Peluang", r: (s: any) => <span className="small">{s.opportunity_title}</span> }, { h: "Jenis", r: (s: any) => s.kind }, { h: "Gap terbuka", r: (s: any) => s.open_gaps }, { h: "Status", r: (s: any) => <Badge v={s.status} /> },
+      { h: "", r: (s: any) => <div className="row">{s.status !== "approved" && <ActionButton run={() => patch(api, `/solutions/${s.id}`, { status: "approved" }).then(() => q.refetch())}>Setujui</ActionButton>}{s.status !== "rejected" && <ActionButton cls="btn ghost sm" run={() => patch(api, `/solutions/${s.id}`, { status: "rejected" }).then(() => q.refetch())}>Tolak</ActionButton>}</div> }]} />
+    <NewPanel perm="intel:write" title="+ Catat gap kapabilitas pada solusi" fields={[{ name: "solutionId", label: "Solusi", type: "select", options: d.items.map((s: any) => ({ value: s.id, label: s.title })) }, { name: "capabilityName", label: "Kapabilitas", required: true }, { name: "resolution", label: "Resolusi", type: "select", options: ["build", "reuse", "compose", "acquire", "integrate", "partner", "contributor", "defer", "reject"].map((v) => ({ value: v, label: v })) }, { name: "plan", label: "Rencana", type: "textarea", required: true }]} submit={({ solutionId, ...v }) => post(api, `/solutions/${solutionId}/gaps`, v).then(() => q.refetch())} />
+  </div>}</Q>;
+}
+
+// 6. Capability Foundry
+export function Capabilities() {
+  const api = useApi();
+  const q = useGet<any>("/capabilities");
+  return <Q q={q}>{(d) => <div className="stack">
+    <NewPanel perm="intel:write" title="+ Daftarkan kapabilitas" fields={[{ name: "name", label: "Nama", required: true }, { name: "kind", label: "Jenis", type: "select", options: ["agent", "tool", "provider", "human", "process", "software"].map((v) => ({ value: v, label: v })) }, { name: "description", label: "Deskripsi", type: "textarea", required: true }, { name: "limitsNote", label: "Batasan" }, { name: "costNote", label: "Catatan biaya" }]} submit={(v) => post(api, "/capabilities", v).then(() => q.refetch())} />
+    <Section title="Inventaris"><Table rows={d.items} empty="Belum ada kapabilitas" cols={[{ h: "Nama", r: (c: any) => c.name }, { h: "Jenis", r: (c: any) => c.kind }, { h: "Batasan", r: (c: any) => <span className="small">{c.limits_note ?? "—"}</span> }, { h: "Kesiapan", r: (c: any) => <Badge v={c.readiness} /> },
+      { h: "", r: (c: any) => <select style={{ width: 130 }} value={c.readiness} onChange={(e) => patch(api, `/capabilities/${c.id}`, { readiness: e.target.value }).then(() => q.refetch())}>{["planned", "building", "ready", "retired"].map((v) => <option key={v}>{v}</option>)}</select> }]} /></Section>
+    <Section title="Gap kapabilitas"><Table rows={d.gaps} empty="Tidak ada gap" cols={[{ h: "Kapabilitas", r: (g: any) => g.capability_name }, { h: "Solusi", r: (g: any) => <span className="small">{g.solution_title}</span> }, { h: "Resolusi", r: (g: any) => g.resolution }, { h: "Rencana", r: (g: any) => <span className="small">{g.plan}</span> }, { h: "Status", r: (g: any) => <Badge v={g.status} /> },
+      { h: "", r: (g: any) => <select style={{ width: 120 }} value={g.status} onChange={(e) => patch(api, `/gaps/${g.id}`, { status: e.target.value }).then(() => q.refetch())}>{["open", "planned", "resolved", "rejected"].map((v) => <option key={v}>{v}</option>)}</select> }]} /></Section>
+  </div>}</Q>;
+}
+
+// 7. Product & Service Catalog
+export function CatalogWs() {
+  const api = useApi();
+  const q = useGet<any>("/products");
+  const subs = useGet<any>("/subscriptions");
+  return <div className="stack">
+    <NewPanel perm="catalog:write" title="+ Produk / layanan baru" fields={[{ name: "name", label: "Nama", required: true }, { name: "kind", label: "Jenis", type: "select", options: ["service", "product", "package", "solution", "managed", "subscription"].map((v) => ({ value: v, label: v })) }, { name: "description", label: "Deskripsi", type: "textarea", required: true }]} submit={(v) => post(api, "/products", v).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada produk" cols={[{ h: "Produk", r: (p: any) => <div><b>{p.name}</b><div className="small muted clip">{p.description}</div></div> }, { h: "Jenis", r: (p: any) => p.kind }, { h: "Status", r: (p: any) => <Badge v={p.status} /> }, { h: "Publik", r: (p: any) => p.is_public ? <Badge v="published" /> : "—" },
+      { h: "", r: (p: any) => <div className="row">{p.status !== "active" && <ActionButton run={() => patch(api, `/products/${p.id}`, { status: "active" }).then(() => q.refetch())}>Aktifkan</ActionButton>}{p.status === "active" && <ActionButton run={() => patch(api, `/products/${p.id}`, { isPublic: !p.is_public }).then(() => q.refetch())}>{p.is_public ? "Sembunyikan" : "Publikasikan"}</ActionButton>}</div> }]} />}</Q>
+    <Section title="Langganan SaaS (Free / Pro / Plus)"><Q q={subs}>{(d) => <Table rows={d.items} empty="Belum ada langganan" cols={[{ h: "Organisasi", r: (s: any) => s.org_name }, { h: "Paket", r: (s: any) => s.plan_code }, { h: "Status", r: (s: any) => <Badge v={s.status} /> }, { h: "Pembayaran", r: (s: any) => s.payment_status ? <span className="row"><Badge v={s.payment_status} /><Badge v={s.mode} /></span> : "—" }, { h: "Berakhir", r: (s: any) => dt(s.current_period_end) }]} />}</Q></Section>
+  </div>;
+}
+
+// 8. Agent Workforce
+export function Agents() {
+  const api = useApi();
+  const q = useGet<any>("/agents");
+  const ai = useGet<any>("/ai/status");
+  return <div className="stack">
+    <Q q={ai}>{(a) => <div className="grid g4">
+      <Stat label="Provider default" value={a.status.defaultProvider} note={a.status.workersAi.bindingPresent ? "binding env.AI aktif" : "binding env.AI tidak ada"} />
+      <Stat label="Neuron hari ini" value={Number(a.totals?.neurons_today ?? 0).toFixed(1)} note={`budget ${a.status.workersAi.dailyNeuronBudget}/hari (estimasi)`} />
+      <Stat label="Neuron bulan ini" value={Number(a.totals?.neurons_month ?? 0).toFixed(1)} note={`budget ${a.status.workersAi.monthlyNeuronBudget}/bulan`} />
+      <Stat label="GroqCloud" value={a.status.groq.enabled ? "aktif" : "nonaktif"} note="tidak pernah jadi fallback otomatis" />
+    </div>}</Q>
+    <NewPanel perm="mission:write" title="+ Daftarkan agen" fields={[{ name: "name", label: "Nama", required: true }, { name: "taskProfile", label: "Task profile", type: "select", options: ["classification", "extraction", "reasoning", "generation"].map((v) => ({ value: v, label: v })) }, { name: "purpose", label: "Tujuan", type: "textarea", required: true }, { name: "dailyNeuronBudget", label: "Budget neuron harian", type: "number", defaultValue: 500 }, { name: "escalationRule", label: "Aturan eskalasi ke manusia", type: "textarea", required: true }]} submit={(v) => post(api, "/agents", { ...v, allowedTools: [] }).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada agen" cols={[{ h: "Agen", r: (a: any) => <div><b>{a.name}</b><div className="small muted">{a.purpose}</div></div> }, { h: "Profil", r: (a: any) => a.task_profile }, { h: "Budget", r: (a: any) => a.daily_neuron_budget }, { h: "Eskalasi", r: (a: any) => <span className="small">{a.escalation_rule}</span> }, { h: "Status", r: (a: any) => <Badge v={a.status} /> },
+      { h: "", r: (a: any) => <ActionButton run={() => patch(api, `/agents/${a.id}`, { status: a.status === "active" ? "paused" : "active" }).then(() => q.refetch())}>{a.status === "active" ? "Jeda" : "Aktifkan"}</ActionButton> }]} />}</Q>
+    <Q q={ai}>{(a) => <Section title="Jejak inferensi terbaru"><Table rows={a.traces} empty="Belum ada inferensi" cols={[{ h: "Waktu", r: (t: any) => <span className="small">{dt(t.created_at)}</span> }, { h: "Profil", r: (t: any) => t.task_profile }, { h: "Model", r: (t: any) => <span className="mono small">{t.model_id}</span> }, { h: "Status", r: (t: any) => <Badge v={t.status} /> }, { h: "Kebijakan", r: (t: any) => <span className="small">{t.policy_decision}</span> }, { h: "Neuron", r: (t: any) => `${Number(t.estimated_neurons).toFixed(2)}${t.usage_estimated ? " (est.)" : ""}` }, { h: "Latensi", r: (t: any) => t.latency_ms ? `${t.latency_ms} ms` : "—" }]} /></Section>}</Q>
+  </div>;
+}
+
+// 9. Execution Control
+export function Execution() {
+  const api = useApi();
+  const q = useGet<any>("/missions");
+  const offers = useGet<any>("/offers");
+  const agents = useGet<any>("/agents");
+  const users = useGet<any>("/users");
+  const [open, setOpen] = useState<string | null>(null);
+  return <div className="stack">
+    <NewPanel perm="mission:write" title="+ Rencanakan misi dari penawaran yang diterima" fields={[{ name: "offerId", label: "Penawaran diterima", type: "select", options: (offers.data?.items ?? []).filter((o: any) => o.status === "accepted").map((o: any) => ({ value: o.id, label: o.title })) }, { name: "title", label: "Judul misi", required: true }, { name: "budgetMinor", label: "Budget (IDR)", type: "money" }]} submit={(v) => post(api, "/missions", v).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada misi" cols={[{ h: "Misi", r: (m: any) => <button className="btn ghost sm" onClick={() => setOpen(open === m.id ? null : m.id)}>{m.title}</button> }, { h: "Status", r: (m: any) => <Badge v={m.status} /> }, { h: "Tugas", r: (m: any) => `${m.tasks_done}/${m.task_count}` }, { h: "Pembayaran", r: (m: any) => m.payment_status ? <span className="row"><Badge v={m.payment_status} /><Badge v={m.payment_mode} /></span> : "—" }, { h: "Tenggat", r: (m: any) => <span className="small">{dt(m.due_at)}</span> }, { h: "", r: (m: any) => <Link className="btn sm" to={`/app/missions/${m.id}`}>Detail</Link> }]} />}</Q>
+    {open && <div className="card stack"><h3>Kendali misi {short(open)}</h3><div className="grid g2">
+      <div className="card"><h3>Tambah tugas</h3><Form label="Tambah" fields={[{ name: "title", label: "Judul", required: true }, { name: "executorType", label: "Pelaksana", type: "select", options: [{ value: "agent", label: "Agen AI" }, { value: "human", label: "Kontributor" }] },
+        { name: "agentId", label: "Agen (jika AI)", type: "select", options: [{ value: "", label: "—" }, ...(agents.data?.items ?? []).filter((a: any) => a.status === "active").map((a: any) => ({ value: a.id, label: a.name }))] },
+        { name: "assigneeUserId", label: "Kontributor terverifikasi", type: "select", options: [{ value: "", label: "—" }, ...(users.data?.items ?? []).filter((u: any) => u.contributor?.status === "verified").map((u: any) => ({ value: u.id, label: u.display_name ?? u.email }))] },
+        { name: "compensationMinor", label: "Kompensasi (IDR, wajib untuk manusia)", type: "money" }, { name: "dueDays", label: "Tenggat (hari)", type: "number", defaultValue: 7 }, { name: "description", label: "Deskripsi", type: "textarea", required: true }, { name: "acceptanceCriteria", label: "Kriteria penerimaan", type: "textarea", required: true }]}
+        submit={(v) => post(api, `/missions/${open}/tasks`, v).then(() => q.refetch())} /></div>
+      <div className="stack">
+        <div className="card"><h3>Transisi</h3><Form label="Terapkan" cols={1} fields={[{ name: "to", label: "Ke", type: "select", options: ["TASKS_DECOMPOSED", "RESOURCES_ASSIGNED", "EXECUTING", "QUALITY_REVIEW", "NEEDS_HUMAN_REVIEW", "SUSPENDED", "FAILED", "CANCELLED"].map((v) => ({ value: v, label: v })) }, { name: "reason", label: "Alasan", required: true }]} submit={(v) => post(api, `/missions/${open}/transition`, v).then(() => q.refetch())} /></div>
+        <MissionTasks id={open} />
+      </div>
+    </div></div>}
+  </div>;
+}
+function MissionTasks({ id }: { id: string }) {
+  const api = useApi();
+  const q = useGet<any>(`/missions/${id}`);
+  return <Q q={q}>{(d) => <div className="card"><h3>Tugas</h3><Table rows={d.tasks} empty="Belum ada tugas" cols={[{ h: "Tugas", r: (t: any) => t.title }, { h: "Status", r: (t: any) => <Badge v={t.status} /> }, { h: "", r: (t: any) => !["done", "cancelled"].includes(t.status) ? <div className="row"><ActionButton confirm={t.executor_type === "human" && t.compensation_minor ? "Menerima tugas ini akan memposting kewajiban bayar kontributor ke ledger. Lanjutkan?" : undefined} run={() => patch(api, `/tasks/${t.id}`, { status: "done" }).then(() => q.refetch())}>Terima selesai</ActionButton><ActionButton cls="btn ghost sm" run={() => patch(api, `/tasks/${t.id}`, { status: "cancelled" }).then(() => q.refetch())}>Batal</ActionButton></div> : null }]} /></div>}</Q>;
+}
+
+// 10. Commercial Control
+export function Commercial() {
+  const api = useApi();
+  const q = useGet<any>("/offers");
+  const customers = useGet<any>("/customers");
+  const opps = useGet<any>("/opportunities?limit=200");
+  return <div className="stack">
+    <NewPanel perm="commercial:write" title="+ Susun penawaran (transparan)" fields={[{ name: "customerOrgId", label: "Pelanggan", type: "select", options: (customers.data?.items ?? []).map((c: any) => ({ value: c.id, label: `${c.name} (${c.requests} request)` })) },
+      { name: "opportunityId", label: "Peluang (opsional)", type: "select", options: [{ value: "", label: "—" }, ...(opps.data?.items ?? []).map((o: any) => ({ value: o.id, label: o.title }))] }, { name: "title", label: "Judul", required: true, full: true },
+      { name: "scope", label: "Ruang lingkup", type: "textarea", required: true }, { name: "deliverables", label: "Hasil (deliverables)", type: "textarea", required: true }, { name: "exclusions", label: "Tidak termasuk", type: "textarea", required: true }, { name: "acceptanceCriteria", label: "Kriteria penerimaan", type: "textarea", required: true }, { name: "refundTerms", label: "Syarat refund & sengketa", type: "textarea", required: true },
+      { name: "priceMinor", label: "Harga (IDR)", type: "money", required: true }, { name: "taxMinor", label: "Pajak (IDR)", type: "money", defaultValue: 0 }, { name: "deliveryDays", label: "Waktu pengerjaan (hari)", type: "number", required: true }, { name: "validDays", label: "Berlaku (hari)", type: "number", defaultValue: 14 }]}
+      submit={(v) => post(api, "/offers", v).then(() => q.refetch())} />
+    <Q q={q}>{(d) => <Table rows={d.items} empty="Belum ada penawaran" cols={[{ h: "Penawaran", r: (o: any) => <div><b>{o.title}</b><div className="small dim">{o.customer_name}</div></div> }, { h: "Harga", r: (o: any) => idr(o.price_minor + o.tax_minor) }, { h: "Status", r: (o: any) => <Badge v={o.status} /> }, { h: "Berlaku", r: (o: any) => <span className="small">{dt(o.valid_until)}</span> },
+      { h: "", r: (o: any) => <div className="row">{o.status === "draft" && <ActionButton run={() => post(api, `/offers/${o.id}/request-publication`).then(() => q.refetch())}>Minta otorisasi</ActionButton>}{["draft", "authorization_pending", "published"].includes(o.status) && <ActionButton cls="btn ghost sm" confirm="Tarik penawaran ini?" run={() => post(api, `/offers/${o.id}/withdraw`).then(() => q.refetch())}>Tarik</ActionButton>}</div> }]} />}</Q>
+    <div className="small dim">Publikasi penawaran membutuhkan persetujuan dari pengguna lain dengan izin approval:decide (pemisahan tugas).</div>
+  </div>;
+}
+
+// 11. Quality & Delivery
+export function Delivery() {
+  const api = useApi();
+  const q = useGet<any>("/missions");
+  const disputes = useGet<any>("/disputes");
+  return <div className="stack">
+    <Q q={q}>{(d) => { const rows = d.items.filter((m: any) => ["QUALITY_REVIEW", "READY_FOR_DELIVERY", "AWAITING_ACCEPTANCE", "DISPUTED"].includes(m.status)); return <Table rows={rows} empty="Tidak ada misi di tahap kualitas/delivery" cols={[{ h: "Misi", r: (m: any) => <Link to={`/app/missions/${m.id}`}>{m.title}</Link> }, { h: "Status", r: (m: any) => <Badge v={m.status} /> },
+      { h: "Aksi", r: (m: any) => m.status === "QUALITY_REVIEW" ? <div className="row"><ActionButton run={() => post(api, `/missions/${m.id}/review`, { decision: "approved", notes: "Memenuhi kriteria penerimaan" }).then(() => q.refetch())}>Lulus QA</ActionButton><ActionButton cls="btn ghost sm" run={() => post(api, `/missions/${m.id}/review`, { decision: "changes_requested", notes: "Perlu revisi" }).then(() => q.refetch())}>Minta revisi</ActionButton></div>
+        : m.status === "READY_FOR_DELIVERY" ? <ActionButton run={async () => { const note = window.prompt("Catatan delivery untuk pelanggan (min. 10 karakter):"); if (!note) return; await post(api, `/missions/${m.id}/deliver`, { note }); q.refetch(); }}>Kirim ke pelanggan</ActionButton>
+        : <span className="small dim">menunggu pelanggan</span> }]} />; }}</Q>
+    <Section title="Sengketa"><Q q={disputes}>{(d) => <Table rows={d.items} empty="Tidak ada sengketa" cols={[{ h: "Misi", r: (x: any) => x.mission_title }, { h: "Alasan", r: (x: any) => <span className="small">{x.reason}</span> }, { h: "Status", r: (x: any) => <Badge v={x.status} /> }, { h: "Dibuka", r: (x: any) => dt(x.created_at) },
+      { h: "", r: (x: any) => x.status === "open" ? <ActionButton run={async () => { const resolution = window.prompt("Resolusi:"); if (!resolution) return; await post(api, `/disputes/${x.id}/resolve`, { status: "resolved", resolution }); disputes.refetch(); }}>Selesaikan</ActionButton> : null }]} />}</Q></Section>
+  </div>;
+}
+
+// 12. Economic Ledger
+export function Ledger() {
+  const api = useApi();
+  const [tab, setTab] = useState("Pembayaran");
+  const intents = useGet<any>("/payments/intents?limit=100");
+  const events = useGet<any>("/payments/events?limit=100");
+  const accounts = useGet<any>("/ledger/accounts");
+  const journals = useGet<any>("/ledger/journals?limit=50");
+  const econ = useGet<any>("/economics/missions");
+  const payouts = useGet<any>("/payouts");
+  const refunds = useGet<any>("/refunds");
+  const gw = useGet<any>("/payments/providers");
+  return <div>
+    <Tabs tabs={["Pembayaran", "Webhook", "Akun & jurnal", "Ekonomi misi", "Payout & refund", "Gateway"]} value={tab} onChange={setTab} />
+    {tab === "Pembayaran" && <Q q={intents}>{(d) => <Table rows={d.items} empty="Belum ada pembayaran" cols={[{ h: "Order", r: (p: any) => <span className="mono small">{p.merchant_order_id}</span> }, { h: "Untuk", r: (p: any) => p.purpose === "subscription" ? `Langganan ${p.plan_code}` : p.offer_title }, { h: "Jumlah", r: (p: any) => idr(p.amount) }, { h: "Gateway", r: (p: any) => p.provider }, { h: "Mode", r: (p: any) => <Badge v={p.mode} /> }, { h: "Status", r: (p: any) => <Badge v={p.status} /> }, { h: "Verifikasi", r: (p: any) => <span className="small">{dt(p.verified_at)}</span> },
+      { h: "", r: (p: any) => <div className="row">{p.mode === "live" && <ActionButton run={() => post(api, `/payments/intents/${p.id}/reconcile`).then(() => intents.refetch())}>Rekonsiliasi</ActionButton>}{p.mode === "live" && p.status === "SUCCEEDED" && <ActionButton cls="btn ghost sm" run={async () => { const reason = window.prompt("Alasan refund:"); if (!reason) return; await post(api, `/payments/intents/${p.id}/refunds`, { amount: p.amount, reason }); }}>Ajukan refund</ActionButton>}</div> }]} />}</Q>}
+    {tab === "Webhook" && <Q q={events}>{(d) => <Table rows={d.items} empty="Belum ada event webhook" cols={[{ h: "Diterima", r: (e: any) => <span className="small">{dt(e.received_at)}</span> }, { h: "Gateway", r: (e: any) => e.provider }, { h: "Order", r: (e: any) => <span className="mono small">{e.merchant_order_id}</span> }, { h: "Status", r: (e: any) => <Badge v={e.normalized_status} /> }, { h: "Jumlah", r: (e: any) => idr(e.amount) }, { h: "Hasil", r: (e: any) => <span className="small">{e.processing_outcome}</span> }, { h: "Hash", r: (e: any) => <span className="mono small dim">{e.payload_hash.slice(0, 10)}</span> }]} />}</Q>}
+    {tab === "Akun & jurnal" && <div className="stack">
+      <Q q={accounts}>{(d) => <><div className={`alert ${d.trialBalance.balanced ? "ok" : "bad"}`}>Trial balance: debit {idr(d.trialBalance.debits)} · kredit {idr(d.trialBalance.credits)} — {d.trialBalance.balanced ? "seimbang" : "TIDAK SEIMBANG"}</div>
+        <Table rows={d.items} cols={[{ h: "Kode", r: (a: any) => a.code }, { h: "Akun", r: (a: any) => a.name }, { h: "Tipe", r: (a: any) => a.account_type }, { h: "Saldo", r: (a: any) => idr(a.balance), cls: "right" }]} /></>}</Q>
+      <NewPanel perm="ledger:write" title="+ Jurnal manual (harus seimbang)" fields={[{ name: "reference", label: "Referensi unik", required: true }, { name: "description", label: "Deskripsi", required: true }, { name: "debitAccount", label: "Akun debit", type: "select", options: (accounts.data?.items ?? []).map((a: any) => ({ value: a.id, label: `${a.code} ${a.name}` })) }, { name: "creditAccount", label: "Akun kredit", type: "select", options: (accounts.data?.items ?? []).map((a: any) => ({ value: a.id, label: `${a.code} ${a.name}` })) }, { name: "amount", label: "Jumlah (IDR)", type: "money", required: true }]}
+        submit={(v) => post(api, "/ledger/journals", { reference: v.reference, description: v.description, lines: [{ accountId: v.debitAccount, direction: "debit", amount: v.amount }, { accountId: v.creditAccount, direction: "credit", amount: v.amount }] }).then(() => { journals.refetch(); accounts.refetch(); })} />
+      <Q q={journals}>{(d) => <Table rows={d.items} empty="Belum ada jurnal" cols={[{ h: "Waktu", r: (j: any) => <span className="small">{dt(j.posted_at)}</span> }, { h: "Sumber", r: (j: any) => <span className="small">{j.source_type}</span> }, { h: "Deskripsi", r: (j: any) => j.description }, { h: "Entri", r: (j: any) => <div className="small">{j.entries.map((e: any) => <div key={e.id}>{e.direction === "debit" ? "D" : "K"} {e.code} {idr(e.amount)}</div>)}</div> }, { h: "Status", r: (j: any) => <Badge v={j.status === "posted" ? "success" : "canceled"} /> },
+        { h: "", r: (j: any) => j.status === "posted" && j.source_type !== "reversal" ? <ActionButton cls="btn ghost sm" run={async () => { const reason = window.prompt("Alasan pembalikan:"); if (!reason) return; await post(api, `/ledger/journals/${j.id}/reverse`, { reason }); journals.refetch(); accounts.refetch(); }}>Balik</ActionButton> : null }]} />}</Q>
+    </div>}
+    {tab === "Ekonomi misi" && <Q q={econ}>{(d) => <Table rows={d.items} empty="Belum ada misi" cols={[{ h: "Misi", r: (m: any) => m.title }, { h: "Status", r: (m: any) => <Badge v={m.status} /> }, { h: "Harga", r: (m: any) => idr(m.price_minor) }, { h: "Dibayar (terverifikasi)", r: (m: any) => idr(m.verified_paid) }, { h: "Pendapatan diakui", r: (m: any) => idr(m.recognized_revenue) }, { h: "Biaya langsung", r: (m: any) => idr(m.direct_costs) }, { h: "Margin kotor", r: (m: any) => m.gross_margin === null ? <span className="dim">belum diakui</span> : idr(m.gross_margin) }]} />}</Q>}
+    {tab === "Payout & refund" && <div className="stack">
+      <Section title="Payout kontributor" sub="Payout otomatis nonaktif. Setelah disetujui, catat referensi transfer eksternal."><Q q={payouts}>{(d) => <Table rows={d.items} empty="Belum ada payout" cols={[{ h: "Kontributor", r: (p: any) => p.contributor_name }, { h: "Tugas", r: (p: any) => p.task_title }, { h: "Jumlah", r: (p: any) => idr(p.amount) }, { h: "Status", r: (p: any) => <Badge v={p.status} /> }, { h: "Ref", r: (p: any) => p.external_reference ?? "—" },
+        { h: "", r: (p: any) => p.status === "approved" ? <ActionButton run={async () => { const externalReference = window.prompt("Referensi transfer bank:"); if (!externalReference) return; await post(api, `/payouts/${p.id}/mark-paid`, { externalReference }); payouts.refetch(); }}>Tandai dibayar</ActionButton> : null }]} />}</Q>
+        <NewPanel perm="ledger:write" title="+ Ajukan payout untuk tugas yang diterima" fields={[{ name: "taskId", label: "ID tugas", required: true }]} submit={(v) => post(api, "/payouts", v).then(() => payouts.refetch())} /></Section>
+      <Section title="Refund"><Q q={refunds}>{(d) => <Table rows={d.items} empty="Belum ada refund" cols={[{ h: "Order", r: (r: any) => <span className="mono small">{r.merchant_order_id}</span> }, { h: "Jumlah", r: (r: any) => idr(r.amount) }, { h: "Alasan", r: (r: any) => r.reason }, { h: "Status", r: (r: any) => <Badge v={r.status} /> }]} />}</Q></Section>
+    </div>}
+    {tab === "Gateway" && <Q q={gw}>{(d) => <><div className={`alert ${d.liveLocked ? "warn" : "ok"}`}>Mode pembayaran: <b>{d.mode}</b>{d.liveLocked && " — live dikunci. Butuh PAYMENTS_MODE=live dan PAYMENT_LIVE_ENABLED=true plus kredensial merchant terverifikasi."}</div>
+      <Table rows={d.gateways} cols={[{ h: "Gateway", r: (g: any) => <b>{g.id}</b> }, { h: "Terkonfigurasi", r: (g: any) => <Badge v={g.configured ? "success" : "pending"} /> }, { h: "Live", r: (g: any) => <Badge v={g.liveEnabled ? "live" : "mock"} /> }, { h: "Kapabilitas", r: (g: any) => <span className="small">{["collection", "statusInquiry", "webhook", "refund", "payout", "split"].filter((k) => g.capabilities[k]).join(", ") || "—"}</span> }, { h: "Verifikasi kontrak", r: (g: any) => <span className="small">{g.capabilities.verification}</span> }, { h: "Catatan", r: (g: any) => <span className="small dim">{g.capabilities.notes}</span> }]} /></>}</Q>}
+  </div>;
+}
+
+// 13. Intelligence & Learning
+export function Learning() {
+  const api = useApi();
+  const q = useGet<any>("/metrics/learning");
+  const missions = useGet<any>("/missions");
+  return <Q q={q}>{(d) => <div className="stack">
+    <Section title="Kinerja AI per task profile"><Table rows={d.aiPerformance} empty="Belum ada inferensi" cols={[{ h: "Profil", r: (r: any) => r.task_profile }, { h: "Model", r: (r: any) => <span className="mono small">{r.model_id}</span> }, { h: "Panggilan", r: (r: any) => r.calls }, { h: "Sukses", r: (r: any) => r.ok }, { h: "Output invalid", r: (r: any) => r.invalid }, { h: "Latensi rata-rata", r: (r: any) => r.avg_latency_ms ? `${r.avg_latency_ms} ms` : "—" }, { h: "Neuron", r: (r: any) => r.neurons }]} /></Section>
+    <Section title="Kinerja provider"><Table rows={d.providerPerformance} empty="Belum ada pemakaian provider" cols={[{ h: "Provider", r: (r: any) => r.provider_id }, { h: "Panggilan", r: (r: any) => r.calls }, { h: "Sukses", r: (r: any) => r.ok }, { h: "Gagal/ditolak", r: (r: any) => r.not_ok }, { h: "Latensi", r: (r: any) => r.avg_latency_ms ? `${r.avg_latency_ms} ms` : "—" }, { h: "Unit", r: (r: any) => `${r.units ?? 0} ${r.unit_type ?? ""}` }]} /></Section>
+    <Section title="Hasil demand"><Table rows={d.demandOutcomes} empty="Belum ada demand" cols={[{ h: "Asal", r: (r: any) => r.origin }, { h: "Status", r: (r: any) => <Badge v={r.status} /> }, { h: "Jumlah", r: (r: any) => r.n }]} /></Section>
+    <NewPanel perm="mission:write" title="+ Catat pembelajaran misi" fields={[{ name: "missionId", label: "Misi", type: "select", options: (missions.data?.items ?? []).map((m: any) => ({ value: m.id, label: `${m.title} (${m.status})` })) }, { name: "summary", label: "Ringkasan", type: "textarea", required: true }, { name: "whatWorked", label: "Yang berhasil", type: "textarea" }, { name: "whatFailed", label: "Yang gagal", type: "textarea" }]} submit={({ missionId, ...v }) => post(api, `/missions/${missionId}/learning`, v).then(() => q.refetch())} />
+    <Section title="Catatan pembelajaran"><Table rows={d.records} empty="Belum ada catatan" cols={[{ h: "Misi", r: (r: any) => r.mission_title ?? "—" }, { h: "Ringkasan", r: (r: any) => r.summary }, { h: "Berhasil", r: (r: any) => <span className="small">{r.what_worked ?? "—"}</span> }, { h: "Gagal", r: (r: any) => <span className="small">{r.what_failed ?? "—"}</span> }, { h: "Waktu", r: (r: any) => dt(r.created_at) }]} /></Section>
+  </div>}</Q>;
+}
+
+// 14. Governance & Audit
+export function Governance() {
+  const api = useApi();
+  const { can, me } = useSession();
+  const [tab, setTab] = useState("Persetujuan");
+  const approvals = useGet<any>("/approvals?status=pending");
+  const audit = useGet<any>("/audit?limit=100");
+  const users = useGet<any>(can("roles:manage") ? "/users" : null);
+  return <div>
+    <Tabs tabs={["Persetujuan", "Pengguna & peran", "Audit"]} value={tab} onChange={setTab} />
+    {tab === "Persetujuan" && <Q q={approvals}>{(d) => <Table rows={d.items} empty="Tidak ada persetujuan tertunda" cols={[{ h: "Aksi", r: (a: any) => <b>{a.action}</b> }, { h: "Sumber daya", r: (a: any) => <span className="small">{a.resource_type} {short(a.resource_id)}</span> }, { h: "Detail", r: (a: any) => <span className="mono small">{a.payload_json}</span> }, { h: "Diminta oleh", r: (a: any) => a.requested_by_name ?? short(a.requested_by) }, { h: "Waktu", r: (a: any) => <span className="small">{dt(a.created_at)}</span> },
+      { h: "", r: (a: any) => can("approval:decide") ? (a.requested_by === me?.user?.id ? <span className="small dim">tidak boleh menyetujui sendiri</span> : <div className="row"><ActionButton cls="btn primary sm" run={async () => { const note = window.prompt("Catatan persetujuan:") ?? ""; if (note.length < 3) throw new Error("Catatan minimal 3 karakter"); await post(api, `/approvals/${a.id}/decide`, { decision: "approved", note }); approvals.refetch(); }}>Setujui</ActionButton><ActionButton cls="btn ghost sm" run={async () => { const note = window.prompt("Alasan penolakan:") ?? ""; if (note.length < 3) throw new Error("Alasan minimal 3 karakter"); await post(api, `/approvals/${a.id}/decide`, { decision: "rejected", note }); approvals.refetch(); }}>Tolak</ActionButton></div>) : null }]} />}</Q>}
+    {tab === "Pengguna & peran" && (can("roles:manage") ? <Q q={users}>{(d) => <Table rows={d.items} empty="Belum ada pengguna" cols={[{ h: "Pengguna", r: (u: any) => <div><b>{u.display_name ?? "—"}</b><div className="small dim">{u.email}{u.email_verified ? " ✓" : ""}</div></div> }, { h: "Status", r: (u: any) => <Badge v={u.status} /> }, { h: "Peran", r: (u: any) => <span className="small">{u.roles.join(", ")}</span> }, { h: "Kontributor", r: (u: any) => u.contributor ? <Badge v={u.contributor.status} /> : "—" },
+      { h: "Kelola", r: (u: any) => <div className="row">
+        <select style={{ width: 150 }} defaultValue="" onChange={async (e) => { const v = e.target.value; e.target.value = ""; if (!v) return; const [action, role] = v.split(":"); try { await post(api, `/users/${u.id}/roles`, { role, action }); users.refetch(); } catch (err) { alert((err as Error).message); } }}>
+          <option value="">Ubah peran…</option>{["owner", "operator", "analyst", "finance", "contributor"].map((r) => <option key={r} value={`${u.roles.includes(r) ? "revoke" : "grant"}:${r}`}>{u.roles.includes(r) ? `Cabut ${r}` : `Beri ${r}`}</option>)}</select>
+        {u.contributor?.status === "pending" && <ActionButton run={() => post(api, `/contributors/${u.id}/verify`, { status: "verified" }).then(() => users.refetch())}>Verifikasi kontributor</ActionButton>}
+        {u.id !== me?.user?.id && <ActionButton cls="btn ghost sm" confirm={`${u.status === "active" ? "Tangguhkan" : "Aktifkan"} pengguna ini?`} run={() => post(api, `/users/${u.id}/status`, { status: u.status === "active" ? "suspended" : "active", reason: "Tindakan operator" }).then(() => users.refetch())}>{u.status === "active" ? "Tangguhkan" : "Aktifkan"}</ActionButton>}
+      </div> }]} />}</Q> : <div className="alert">Butuh izin roles:manage.</div>)}
+    {tab === "Audit" && <Q q={audit}>{(d) => <Table rows={d.items} empty="Belum ada event audit" cols={[{ h: "Waktu", r: (a: any) => <span className="small">{dt(a.created_at)}</span> }, { h: "Aktor", r: (a: any) => <span className="small">{a.actor_type} {short(a.actor_user_id)}</span> }, { h: "Aksi", r: (a: any) => <b className="small">{a.action}</b> }, { h: "Sumber daya", r: (a: any) => <span className="small">{a.resource_type} {short(a.resource_id)}</span> }, { h: "Hasil", r: (a: any) => <Badge v={a.outcome} /> }, { h: "Metadata", r: (a: any) => <span className="mono small dim clip" title={a.metadata_json}>{a.metadata_json}</span> }]} />}</Q>}
+  </div>;
+}

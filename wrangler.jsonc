@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Pages project: static SPA (dist/) + Hono API (dist/_worker.js, /api/* only).
+  "name": "dayanexa",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+
+  // Primary inference: native Workers AI binding (env.AI). No external LLM key required.
+  "ai": { "binding": "AI" },
+
+  // Private artifact storage. Objects are never public; delivery uses short-lived signed links.
+  "r2_buckets": [{ "binding": "ARTIFACTS", "bucket_name": "dayanexa-private" }],
+
+  // D1 (DB) — BLOCKED: the account is at its D1 database limit (Workers Free). Owner action required;
+  // then run scripts/activate-d1.sh which creates dayanexa-production, inserts the binding here and applies migrations.
+
+  "vars": {
+    "APP_ENV": "production",
+    "PUBLIC_ORIGINS": "https://dayanexa.biz.id,https://www.dayanexa.biz.id",
+    "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZGF5YW5leGEuYml6LmlkJA",
+    "CLERK_AUTHORIZED_PARTIES": "https://dayanexa.biz.id,https://www.dayanexa.biz.id",
+    "BOOTSTRAP_OWNER_EMAILS": "sparkmind.support@gmail.com",
+    "INFERENCE_PROVIDER": "workers-ai",
+    "AI_DAILY_NEURON_BUDGET": "8000",
+    "AI_MONTHLY_NEURON_BUDGET": "200000",
+    "GROQ_ENABLED": "false",
+    "TAVILY_DAILY_CREDIT_CAP": "25",
+    "FIRECRAWL_DAILY_CREDIT_CAP": "25",
+    "SPECIALIZED_SCRAPER": "none",
+    "SPECIALIZED_ACTOR_ALLOWLIST": "",
+    "SPECIALIZED_MAX_CHARGE_USD": "0.10",
+    "PAYMENTS_MODE": "mock",
+    "PAYMENT_LIVE_ENABLED": "false",
+    "FASPAY_CONTRACT_VERIFIED": "false",
+    "DUITKU_BASE_URL": "https://sandbox.duitku.com",
+    "MIDTRANS_BASE_URL": "https://app.sandbox.midtrans.com",
+    "MIDTRANS_API_BASE_URL": "https://api.sandbox.midtrans.com",
+    "XENDIT_BASE_URL": "https://api.xendit.co"
+  }
+}

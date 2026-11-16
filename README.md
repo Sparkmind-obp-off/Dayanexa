@@ -1,59 +1,55 @@
-# DAYANEXA
-**Agentic Opportunity & Execution OS**
+# DAYANEXA — Agentic Opportunity & Execution OS
 
-> Discover demand. Build the capability. Deliver the outcome.
+Implementasi sesuai `docs/16-master-system-and-full-stack-implementation.md` (v1.1) dan `prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md`.
 
-DAYANEXA is an agentic economic execution system. It discovers real market demand, validates evidence and commercial intent, designs products/services/solutions, forms missing capabilities, orchestrates AI agents and human contributors where appropriate, delivers accepted outcomes, verifies economic events, and learns from results.
+## Stack
+- **Frontend**: React 18 + TypeScript + Vite, React Router, TanStack Query, Clerk React (Production, **Google-only**), lucide icons, design system gelap kustom.
+- **API**: Hono di Cloudflare Pages Functions (advanced mode, `dist/_worker.js`, `_routes.json` → `/api/*`).
+- **Data**: Cloudflare D1 (5 migrasi, 43 tabel, ledger double-entry immutable), R2 privat `dayanexa-private` untuk artefak (download bertanda tangan HMAC).
+- **AI**: Workers AI (`env.AI`) default — profil classification/extraction (Llama 3.1 8B fp8), reasoning/generation (Llama 3.3 70B fp8-fast), embeddings (bge-m3); budget neuron harian/bulanan, circuit breaker, validasi zod, `inference_traces`. Groq opsional, **nonaktif** default, tanpa fallback otomatis.
+- **Provider riset**: Tavily, Firecrawl, Apify, Scrape.ly — governor biaya (cap harian), SSRF guard, tanpa fallback berbayar.
+- **Pembayaran**: Duitku, Xendit, Midtrans, Faspay di balik satu antarmuka ternormalisasi; verifikasi webhook + rekonsiliasi status; refund/payout butuh approval; **live terkunci** (`PAYMENT_LIVE_ENABLED=false`, `PAYMENTS_MODE=mock`). Faspay fail-closed sampai kontrak merchant diverifikasi.
 
-## Product doctrine
-**Demand defines the opportunity. Intelligence defines the solution. Capability makes it possible. Agents orchestrate execution. Commercialization creates value. Verified outcomes prove success.**
+## Fitur
+- **Publik**: Landing, Cara kerja, Harga (SaaS **Free / Pro / Plus** + paket layanan), Katalog, FAQ, Kontak, Legal (terms, privacy, refund, contributor terms), Sign-in/up Google.
+- **Customer journey**: dashboard, ajukan kebutuhan (kuota per plan, AI draft untuk Pro/Plus), daftar permintaan → terima penawaran → payment intent, detail misi (artefak, terima/sengketakan delivery), billing (upgrade/cancel), notifikasi.
+- **Contributor journey**: profil kontributor, tugas yang ditugaskan.
+- **14 workspace command center** (berbasis permission): Executive, Market Radar, Demand Intelligence, Opportunities, Solutions, Capabilities, Catalog, Agents, Execution, Commercial, Delivery, Ledger, Learning, Governance.
+- Authz milik DAYANEXA: role owner/operator/analyst/finance/contributor/member, isolasi tenant, separation of duties pada approval, audit append-only, rate limit, idempotency key.
 
-DAYANEXA is not a job board, freelancer marketplace, passive opportunity directory, generic chatbot, or capability-limited service agency. Demand discovery must not be constrained by the capabilities currently installed.
+## Paket
+| Plan | Harga/30 hari | Permintaan | AI assist | Seat |
+|---|---|---|---|---|
+| Free | Rp0 | 2 | 0 | 1 |
+| Pro | Rp149.000 | 10 | 50 | 3 |
+| Plus | Rp399.000 | 30 | 200 | 10 |
 
-## Current status
-- Repository foundation: committed to main.
-- Product Constitution, architecture, lifecycle, agent model, governance, economics, provider strategy, roadmap, and ADRs: documented in /docs.
-- Runtime: React + TypeScript + Vite command-center prototype plus a Cloudflare Workers API foundation under `apps/api`; not production-ready.
-- AI inference direction: Cloudflare Workers AI via the native `env.AI` binding is the primary/default path; GroqCloud is optional and disabled by default. Live model use, quota and billing must be verified against the Cloudflare account.
-- CI: GitHub Actions typecheck and production build passed on commit e86193a; latest documentation commits are awaiting CI verification.
-- Clerk JWT verification and four payment gateway adapters are scaffolded in `apps/api`; live credentials, sandbox contract tests, payment reconciliation and payouts are not enabled.
-- Domain: dayanexa.biz.id (ownership reported by project owner; DNS and deployment not verified here).
+Layanan (mulai dari): Demand Validation Rp750rb · Solution Sprint Rp3,5jt · Build & Deliver Rp9,5jt · Managed Ops Rp4,9jt/bln.
 
-## Start locally
+## API utama (`/api/v1`)
+Publik: `GET /health`, `/config`, `/catalog`, `/plans`, `/artifacts/download`, webhooks `/webhooks/clerk`, `/webhooks/payments/:gateway`.
+Terautentikasi (Bearer Clerk): `/me`, `/notifications`, `/requests`, `/requests/ai-draft`, `/billing`, `/billing/subscribe`, `/billing/cancel`, intel (sources/signals/demands/opportunities…), ops (solutions/capabilities/missions/tasks/deliveries/artifacts…), commerce (offers/payments/refunds/payouts/ledger), governance (approvals/audit/providers/inference), metrics.
+
+## Pengembangan
 ```bash
 npm install
-npm run dev
-npm run check
-npm run build
+npm run build            # vite + bundle worker
+npm run typecheck && npm test && npm run check:migrations && npm run check:secrets
+pm2 start ecosystem.config.cjs   # wrangler pages dev dist :3000
 ```
+Secret lokal: salin `.dev.vars.example` → `.dev.vars`.
 
-## Documentation map
-- [Product Constitution](docs/00-product-constitution.md)
-- [Master Architecture](docs/01-master-architecture.md)
-- [Domain Model](docs/02-domain-model.md)
-- [Opportunity Lifecycle](docs/03-opportunity-lifecycle.md)
-- [Agent Workforce](docs/04-agent-workforce.md)
-- [Demand Intelligence](docs/05-demand-intelligence.md)
-- [Capability Foundry](docs/06-capability-foundry.md)
-- [Commercial & Economic Engine](docs/07-commercial-economics.md)
-- [Governance & Security](docs/08-governance-security.md)
-- [Command Center](docs/09-command-center.md)
-- [Roadmap](docs/10-roadmap.md)
-- [Implementation Blueprint](docs/11-implementation-blueprint.md)
-- [MVP Acceptance Criteria](docs/12-mvp-acceptance.md)
-- [Provider Stack & Cost Governance](docs/13-provider-stack-and-cost-governance.md)
-- [Identity, Monetization & Payment Architecture](docs/14-identity-monetization-and-payments.md)
-- [Implementation Foundation V1](docs/15-implementation-foundation.md)
-- [Master System & Full-Stack Implementation Specification](docs/16-master-system-and-full-stack-implementation.md)
-- [Master System / Full-Stack Implementation Prompt](prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md)
+## Deploy (Cloudflare BYOK)
+`npm run deploy` → Pages project `dayanexa`, branch `main`. Secret disimpan via `wrangler pages secret put` (tidak pernah di-commit).
 
-## AI inference decision
-Cloudflare Workers AI is the default inference runtime through the Cloudflare Worker `env.AI` binding. GroqCloud is retained only as an optional adapter and is not required for baseline operation. See the master system and implementation prompt for model governance, budget controls, AI Gateway boundaries and activation gates.
-- [API setup and safety defaults](apps/api/README.md)
-- [Architecture Decision Records](docs/adr/)
+## Checklist aktivasi owner (wajib)
+1. **D1**: akun Workers Free sudah mencapai batas jumlah database. Hapus satu D1 lama atau upgrade, lalu jalankan `bash scripts/activate-d1.sh` (buat `dayanexa-production`, binding, migrasi remote, deploy ulang). Sebelum itu API terautentikasi mengembalikan `DATABASE_NOT_CONFIGURED`.
+2. **Clerk**: pastikan hanya Google yang aktif di dashboard Clerk Production; buat webhook ke `https://dayanexa.biz.id/api/v1/webhooks/clerk` dan set `CLERK_WEBHOOK_SECRET`.
+3. **DNS**: token Cloudflare tidak punya izin DNS — tambahkan CNAME `dayanexa.biz.id`/`www` → `dayanexa.pages.dev` bila belum otomatis.
+4. **Pembayaran**: isi kredensial sandbox merchant; live hanya setelah approval owner (`PAYMENT_LIVE_ENABLED=true`, `PAYMENTS_MODE=live`).
+5. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
 
-## Non-negotiable safeguards
-No fabricated demand, fake customer intent, deceptive listings, unpaid speculative labor, hidden fees, unauthorized scraping, unapproved spending, unapproved external commitments, or unverified payment claims. Human contributors receive clear scope, compensation, deadline, acceptance criteria, and dispute path before work begins.
-
-## License
-All rights reserved unless a separate license is added by the project owner.
+## Status
+- CI workflow siap di `docs/ci/ci.workflow.yml` (salin ke `.github/workflows/ci.yml` — GitHub App belum punya izin `workflows`).
+- Typecheck ✅ · 18 unit test ✅ · migrasi ✅ · secret scan ✅ · build ✅
+- Terakhir diperbarui: 2026-11-16
