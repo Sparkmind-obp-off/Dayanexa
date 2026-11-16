@@ -337,3 +337,8 @@ Mandatory execution rules:
 8. Report specified, source-implemented, locally tested, provider/sandbox-verified and production-verified states separately.
 
 The ordered phases and detailed acceptance tests are binding in docs/29. Do not declare V3 complete until every engine and cross-cutting journey meets its acceptance criteria.
+
+
+## Member Omni-Channel Demand Discovery
+
+The binding source-selection and campaign contract is [docs/31-member-discovery-privilege-and-real-demand-access.md](31-member-discovery-privilege-and-real-demand-access.md), Section 12. Member Discovery supports single-channel, multi-channel and omni/automatic discovery; a searchable, extensible catalog of platforms and public communities; member-selected demand categories and natural-language briefs; reviewed source-to-Actor routing; and unified, provenance-preserving, cross-channel evidence. A multi-channel campaign consumes one campaign entitlement with one pre-reserved aggregate resource ceiling, not one free allowance per channel. Source permission, provider readiness, quotas, budgets, privacy and tenant isolation remain mandatory.
