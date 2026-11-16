@@ -18,11 +18,11 @@ Evolve Batch V2 into a real Demand-to-Execution OS. The five engines become the 
 - Run clean install, typecheck, tests, migration checks, secret scan, audit and production build.
 - Verify current production deployment commit and Cloudflare bindings.
 - Verify Google-only Clerk sign-in and authenticated API in browser.
-- Verify actual GitHub Actions workflow path and successful run.
+- Verify local validation scripts and Wrangler CLI/account access; GitHub Actions CI/CD is intentionally not used.
 - Remove committed environment-specific files and retain safe examples.
 - No production migration or secret mutation without owner approval.
 
-**Exit:** reproducible CI and deploy provenance; real auth browser test; known production baseline; no unreviewed secret or workflow drift.
+**Exit:** reproducible local validation and Wrangler deployment evidence; real auth browser test; known production baseline; no unreviewed secret or deployment drift.
 
 ## Phase 1 — Demand Discovery Engine
 
@@ -84,7 +84,7 @@ Evolve Batch V2 into a real Demand-to-Execution OS. The five engines become the 
 
 ## Admin & Resource Control Center workstream
 
-Implement `docs/25-admin-resource-control-center.md` as a cross-cutting workstream, starting with repository hygiene and CI, then customer/contributor administration, persisted provider policies, Actor registry, cost attribution and Cloudflare operations visibility. It supports all five engines and is not optional dashboard decoration. Provider policy enforcement must precede any production Actor expansion.
+Implement `docs/25-admin-resource-control-center.md` as a cross-cutting workstream, starting with repository hygiene and local validation scripts, then customer/contributor administration, persisted provider policies, Actor registry, cost attribution and Cloudflare operations visibility. It supports all five engines and is not optional dashboard decoration. Provider policy enforcement must precede any production Actor expansion.
 
 ## Cross-cutting gates
 
