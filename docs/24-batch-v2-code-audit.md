@@ -57,7 +57,7 @@ Do not restart the application from scratch. Preserve the working identity, requ
 - Package scripts include typecheck, Vitest, migration check, secret check, audit and build.
 - `package-lock.json` is present in the audited tree.
 - Wrangler config defines Pages, D1, R2 and Workers AI bindings.
-- `docs/ci/ci.workflow.yml` exists, but a file under `docs/ci` is not an active GitHub Actions workflow. Confirm `.github/workflows/ci.yml` and a successful run separately.
+- At this historical audit point, `docs/ci/ci.workflow.yml` was only a template and no active workflow had yet been proven. Subsequent repository history briefly added a workflow, then retired both workflow and template by owner decision. Current release verification is local + manual Wrangler.
 - Both `.env.development` and `.env.production` exist in the repository tree with the same blob SHA. The inspected contents contain only a Vite Clerk publishable key, not a private Clerk secret. These environment files should still be removed from source control and represented by safe examples to avoid normalizing committed environment-specific configuration.
 
 ## 3. Five-engine audit matrix
@@ -119,7 +119,7 @@ Do not restart the application from scratch. Preserve the working identity, requ
 11. **Market presentation is not implemented:** offers and delivery exist, but no explicit consent/lawful-basis presentation record, outreach approval, opt-out/suppression or demo-response funnel is visible.
 12. **Tenant-boundary tests need expansion:** authorization policy distinguishes staff and customer orgs, but V3 tests must exercise every demand, signal, opportunity, solution, mission and artifact route against cross-tenant IDs, including joins and nested mutations.
 13. **Environment files are committed:** `.env.development` and `.env.production` contain the same publishable Clerk key. It is not a private secret, but these files should be removed from Git and covered by ignore rules.
-14. **CI activation remains unproven:** `docs/ci/ci.workflow.yml` is a template location; verify an actual workflow under `.github/workflows` and a successful run.
+14. **Historical CI activation note (superseded):** at this audit point, only a template was confirmed. GitHub Actions was later activated and subsequently retired by owner decision. Do not recreate it; use current local validation and Wrangler procedures.
 15. **Production auth and customer journeys remain owner/browser gates:** source presence and API smoke tests do not prove a real Google login or full customer/contributor/operator browser journey.
 
 ## 6. What to reuse
