@@ -52,9 +52,18 @@ Discover demand first regardless of current capability. Then choose to reuse, co
 11. Unknown authorization, quota, pricing, provenance or safety fails closed.
 12. Never evade provider limits by rotating accounts.
 
-## 2A. Explicit scope boundary — identity is not the implementation target
+## 2A. Account identity, platform roles and V3 product entitlement are separate
 
-The current implementation objective is the complete DAYANEXA V3 Demand-to-Execution system. Do not interpret this objective as a request to change the user's account, platform role, membership, bootstrap identity, or the visual display of a `member` label. Do not promote, demote, rewrite, or otherwise mutate account/role data as a shortcut or proxy for V3 completion. Identity and authorization remain security foundations and must be audited only where required for correct access control, tenant isolation, and least privilege. The user's concern in this workstream is that the V3 product concepts become real, integrated, tested capabilities—not a role-label change.
+The platform owner identity `sparkmind.support@gmail.com` remains the owner/platform administrator. A normal account such as `elmatador0197@gmail.com` may remain `member` and must still be able to use the complete DAYANEXA V3 product through an explicit Free-plan product entitlement. **Do not promote a member to owner/operator/analyst or grant platform administration as a workaround.** The implementation target includes making V3 usable by member accounts; it is not satisfied by hiding the V3 product behind staff-only role permissions.
+
+Three separate layers must be enforced:
+1. **Platform role:** governs global operational authority (provider/account configuration, global source/Actor allowlists, budgets, secrets, payments configuration, platform governance, cross-tenant access and Admin & Resource Control Center). Owner-only controls remain owner-only.
+2. **Organization membership and tenant scope:** a member may act only within organizations where they have an active membership; all reads, writes, search, artifacts, missions, offers, delivery, usage and learning must be tenant-scoped. A product entitlement must never bypass `assertOrgAccess`.
+3. **Product-plan entitlement:** Free grants access to all customer-usable V3 engine capabilities and product workspaces, with explicit no-cost quotas/limits. Feature access is not the same as unlimited usage. Pro/Plus may raise quotas or service levels, but must not be required just to discover or use the V3 product's core engine capabilities.
+
+Do not grant `workspace:read` to a member merely to reveal internal workspaces: that permission currently represents platform staff and bypasses ordinary organization scoping in `assertOrgAccess`. Introduce a distinct customer/product permission (e.g. `v3:use`) and tenant-safe member-facing workspace/API surfaces. The 14 V3 product domains/engines must be available in a member-safe experience; global Admin & Resource Control remains owner-only. Do not expose cross-tenant intelligence, global operational queues, private provider credentials, raw account controls, other customers' records or internal financial ledgers to a member.
+
+Free-plan capability availability must be distinct from metered quotas. Keep paid provider spend, paid fallback, overage and auto-top-up disabled. AI/agent execution on Free must use only a verified no-cost allowance and a hard cap; if no eligible free allowance exists, clearly defer the costly operation rather than silently incur spend. The member's product access must not depend on changing their role or editing identity records.
 
 ## 3. Five engines
 
