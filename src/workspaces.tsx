@@ -1,3 +1,4 @@
+import { DiscoveryAdmin } from "./pages/Discovery";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { dt, idr, useApi, useGet, usePublic } from "./lib/api";
@@ -384,7 +385,8 @@ export function AdminControl() {
   const actorItems = benchmarks.data?.items ?? [];
   return <div className="stack">
     <div className="alert warn small">Pusat kontrol administratif. Data dan tindakan dibatasi oleh izin owner. Setiap panggilan provider (Workers AI, Groq, Tavily, Firecrawl, Apify, Scrape.ly) melewati Provider Runtime Gateway server-side: policy, akun terotorisasi, kuota terverifikasi, cap, reservasi atomik, rekonsiliasi dan circuit breaker. Default: semua diblokir sampai dikonfigurasi.</div>
-    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Akun provider", "Runtime gateway", "Actor", "Actor registry", "Cloudflare & CI"]} value={tab} onChange={setTab} />
+    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Akun provider", "Runtime gateway", "Actor", "Actor registry", "Discovery member", "Cloudflare & CI"]} value={tab} onChange={setTab} />
+    {tab === "Discovery member" && <DiscoveryAdmin />}
     {tab === "Ringkasan" && <div className="stack">
       <div className="grid g4">
         <Stat label="Organisasi pelanggan" value={customerItems.length} note="Organisasi tercatat di D1" />

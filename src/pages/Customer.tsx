@@ -18,7 +18,7 @@ export function CustomerHome() {
     <div className="card row between" style={{ padding: 22 }}>
       <div><div className="eyebrow">Selamat datang</div><h2 style={{ fontSize: 22, marginTop: 6 }}>Halo, {name}</h2>
         <p className="muted small" style={{ margin: "6px 0 0" }}>Paket <b>{me?.plan.name}</b> · {me?.usage.requests}/{me?.plan.limits.requestsPerMonth} request periode ini (reset {dt(me?.window?.resetsAt)}){me?.subscription?.current_period_end ? ` · aktif s/d ${dt(me.subscription.current_period_end)}` : ""}</p></div>
-      <div className="row"><Link className="btn primary" to="/app/requests/new">Ajukan kebutuhan <ArrowRight size={15} /></Link>{me?.plan.code === "free" && <Link className="btn" to="/app/billing">Upgrade</Link>}{isStaff && <Link className="btn" to="/app/w/executive">Command center</Link>}</div>
+      <div className="row"><Link className="btn" to="/app/discovery">Discovery{me?.discovery?.remaining !== undefined ? ` · ${me.discovery.remaining} hak` : ""}</Link><Link className="btn primary" to="/app/requests/new">Ajukan kebutuhan <ArrowRight size={15} /></Link>{me?.plan.code === "free" && <Link className="btn" to="/app/billing">Upgrade</Link>}{isStaff && <Link className="btn" to="/app/w/executive">Command center</Link>}</div>
     </div>
     <Q q={q}>{(d) => <>
       <div className="grid g4">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { UserButton } from "@clerk/react";
-import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox, LifeBuoy, Lock, ListChecks, SlidersHorizontal } from "lucide-react";
+import { Bell, Compass, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox, LifeBuoy, Lock, ListChecks, SlidersHorizontal } from "lucide-react";
 import { Brand } from "./Public";
 import { useSession } from "../lib/session";
 import { useGet } from "../lib/api";
@@ -10,6 +10,7 @@ import { Billing, ContributorPage, CustomerHome, MyRequests, NewRequest, Notific
 import { MissionDetail } from "./MissionDetail";
 import { Onboarding, OpsQueues, PrivacyPage, RequestDetail, SupportPage } from "./Journey";
 import * as W from "../workspaces";
+import { CampaignDetail, DiscoveryCatalogPage, DiscoveryHome, NewCampaign } from "./Discovery";
 
 export const WORKSPACES = [
   { path: "executive", name: "Executive Command", icon: Gauge, el: W.Executive, perm: "workspace:read" },
@@ -37,14 +38,14 @@ export default function AppShell() {
   if (loading) return <Loading label="Memverifikasi sesi…" />;
   if (me?.needsOnboarding) return <Onboarding />;
   if (error) return <div className="fatal stack"><Brand /><h2>Tidak dapat memuat akun</h2><ErrorBox error={error} /><p className="muted small">Jika ini terjadi setelah login, server mungkin belum selesai dikonfigurasi (database / kunci verifikasi Clerk). Tidak ada login alternatif atau mock.</p><UserButton /></div>;
-  const title = WORKSPACES.find((w) => loc.pathname.includes(`/w/${w.path}`))?.name ?? CUSTOMER_TITLES.find(([p]) => loc.pathname === `/app${p}`)?.[1] ?? "DAYANEXA";
+  const title = WORKSPACES.find((w) => loc.pathname.includes(`/w/${w.path}`))?.name ?? CUSTOMER_TITLES.find(([p]) => loc.pathname === `/app${p}`)?.[1] ?? (loc.pathname.startsWith("/app/discovery/") ? "Kampanye discovery" : "DAYANEXA");
   const nav = (to: string, label: string, Icon: typeof Home, idx?: string) => <NavLink key={to} to={to} end={to === "/app"} className={({ isActive }) => `nav ${isActive ? "on" : ""}`} onClick={() => setOpen(false)}><Icon size={16} /><span>{label}</span>{idx && <span className="idx">{idx}</span>}</NavLink>;
   return <div className="shell">
     {open && <div className="scrim" onClick={() => setOpen(false)} />}
     <aside className={`side ${open ? "open" : ""}`} aria-label="Navigasi aplikasi">
       <div style={{ padding: "4px 8px 14px" }}><Brand /></div>
       <div className="label">Akun saya</div>
-      {nav("/app", "Beranda", Home)}{nav("/app/requests/new", "Ajukan kebutuhan", PlusCircle)}{nav("/app/requests", "Request & penawaran", Inbox)}
+      {nav("/app", "Beranda", Home)}{can("v3:use") && nav("/app/discovery", "Discovery (V3)", Compass)}{nav("/app/requests/new", "Ajukan kebutuhan", PlusCircle)}{nav("/app/requests", "Request & penawaran", Inbox)}
       {nav("/app/billing", "Paket & tagihan", CreditCard)}{nav("/app/contributor", "Kontributor", HandHelping)}{nav("/app/notifications", `Notifikasi${notes.data?.unread ? ` (${notes.data.unread})` : ""}`, Bell)}{nav("/app/support", "Dukungan", LifeBuoy)}{nav("/app/privacy", "Privasi & data", Lock)}
       {isStaff && <><div className="label">Operasional</div>{nav("/app/queues", "Antrean operator", ListChecks)}<div className="label">Command center · 15</div>{WORKSPACES.filter((w) => can(w.perm)).map((w, i) => nav(`/app/w/${w.path}`, w.name, w.icon, String(i + 1).padStart(2, "0")))}</>}
       <div className="grow" />
@@ -59,6 +60,10 @@ export default function AppShell() {
       <Routes>
         <Route index element={<CustomerHome />} />
         <Route path="requests/new" element={<NewRequest />} />
+        <Route path="discovery" element={can("v3:use") ? <DiscoveryHome /> : <Navigate to="/app" replace />} />
+        <Route path="discovery/new" element={can("v3:use") ? <NewCampaign /> : <Navigate to="/app" replace />} />
+        <Route path="discovery/catalog" element={can("v3:use") ? <DiscoveryCatalogPage /> : <Navigate to="/app" replace />} />
+        <Route path="discovery/:id" element={can("v3:use") ? <CampaignDetail /> : <Navigate to="/app" replace />} />
         <Route path="requests" element={<MyRequests />} />
         <Route path="billing" element={<Billing />} />
         <Route path="contributor" element={<ContributorPage />} />
@@ -74,4 +79,4 @@ export default function AppShell() {
     </main>
   </div>;
 }
-const CUSTOMER_TITLES: [string, string][] = [["", "Beranda"], ["/requests/new", "Ajukan kebutuhan"], ["/support", "Dukungan"], ["/privacy", "Privasi & data"], ["/queues", "Antrean operator"], ["/requests", "Request & penawaran"], ["/billing", "Paket & tagihan"], ["/contributor", "Kontributor"], ["/notifications", "Notifikasi"]];
+const CUSTOMER_TITLES: [string, string][] = [["", "Beranda"], ["/discovery", "Demand Discovery"], ["/discovery/new", "Kampanye discovery baru"], ["/discovery/catalog", "Katalog sumber"], ["/requests/new", "Ajukan kebutuhan"], ["/support", "Dukungan"], ["/privacy", "Privasi & data"], ["/queues", "Antrean operator"], ["/requests", "Request & penawaran"], ["/billing", "Paket & tagihan"], ["/contributor", "Kontributor"], ["/notifications", "Notifikasi"]];

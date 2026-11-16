@@ -10,6 +10,7 @@ export interface Me {
   usage: { requests: number; aiAssists: number };
   window: { start: string; resetsAt: string; basis: string; periodDays: number };
   termsVersion: string; needsOnboarding: boolean;
+  discovery?: { state: string; remaining?: number; used?: number; nextResetAt?: string | null } | null;
 }
 interface SessionCtx { me: Me | undefined; can: (p: string) => boolean; isStaff: boolean; loading: boolean; error: ApiError | null; refetch: () => void }
 const Ctx = createContext<SessionCtx>({ me: undefined, can: () => false, isStaff: false, loading: true, error: null, refetch: () => {} });
