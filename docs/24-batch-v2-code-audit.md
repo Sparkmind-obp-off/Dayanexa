@@ -209,3 +209,24 @@ No production database migration, provider activation, paid Actor run, payment c
 8. Run local release checks from a real checkout; separately verify Google sign-in and owner/customer/contributor/finance browser journeys. Keep production migration, provider spend, live payments and deployment behind explicit approval.
 
 **Audit conclusion:** DAYANEXA is a working V2/V3 foundation with several real workflows and a source-level provider runtime gateway. It is not yet a complete, production-proven V3 Demand-to-Execution OS. The next work must be source implementation and test evidence, not another round of conceptual documentation.
+
+
+---
+
+# D. Member V3 access and Free-plan entitlement audit — 16 November 2026
+
+Source inspection after the user clarified the account requirement found the concrete reason a normal member cannot use V3:
+
+- `apps/api/src/auth/policy.ts`: `ROLE_PERMISSIONS.member` is only `customer:self`.
+- `src/pages/AppShell.tsx`: the 15-workspace Command Center navigation is rendered only inside `{isStaff && ...}`; individual workspaces are gated by staff permissions (`workspace:read`, `ledger:read`, `governance:read`, `provider:admin`).
+- `assertOrgAccess()` treats `workspace:read` as platform staff and bypasses ordinary organization scoping. Giving this permission to members would be an IDOR/cross-tenant risk, not a valid fix.
+- `apps/api/src/domain/plans.ts`: Free is Rp0, 2 requests/30 days, 0 AI assists, 1 seat.
+- `src/pages/Customer.tsx`: Free users cannot use the AI request-drafting capability and are directed to upgrade.
+
+**Correct product requirement:** keep `sparkmind.support@gmail.com` as platform owner; keep `elmatador0197@gmail.com` and all ordinary users at their existing `member` role; provide full customer-usable V3 product access through a distinct Free-plan product entitlement. Do not hard-code either email address. See `docs/30-member-v3-access-and-free-entitlement.md`.
+
+**Architecture required:** separate platform role, tenant membership, and product-plan entitlement. Add a member-safe V3 workspace and tenant-scoped APIs. Keep global Admin/Provider/Actor/finance controls owner-only. Do not reuse `workspace:read` for member product access.
+
+**Free AI constraint:** Cloudflare's official Workers AI pricing documentation currently states 10,000 Neurons/day at no charge on Workers Free, with further calls failing when exhausted; some models require Workers Paid. The allocation is shared at provider/account level, not a guaranteed per-user allowance. DAYANEXA must enforce a shared central cap, protected reserve, per-organization sub-caps and fail-closed behavior before offering positive Free AI usage. Existing application defaults are 8,000 neurons/day and 200,000/month; do not increase them without verified provider plan/quota and budget design. <https://developers.cloudflare.com/workers-ai/platform/pricing/>
+
+**Status:** root cause identified and documented; member product entitlement, member-facing V3 UI, tenant-safe APIs, and positive bounded Free AI allocation are not yet implemented. No account/role mutation, migration, provider spend or deployment was performed.
