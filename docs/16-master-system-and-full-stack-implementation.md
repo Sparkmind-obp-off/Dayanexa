@@ -647,6 +647,11 @@ The five engine specifications, Batch V2 audit and roadmap are:
 - `docs/22-agentic-execution-engine.md`
 - `docs/23-market-delivery-engine.md`
 - `docs/24-batch-v2-code-audit.md`
+- `docs/25-admin-resource-control-center.md`
 - `docs/17-master-upgrade-and-execution-roadmap.md`
 
 V3 is complete only when each engine passes its own code, schema, UI, permission, test, observability and acceptance gates. A provider adapter, CRUD screen, task assignment, mock payment or generated text is not proof of a completed engine.
+
+## 29. Admin & Resource Control Center
+
+The canonical owner/operator control plane is specified in `docs/25-admin-resource-control-center.md`. It adds an administrative workspace alongside the existing 14 workspaces for customer management, contributor management, provider and Actor registry, cost/usage governance, Cloudflare operations visibility, approvals and audit. Provider policies must be persisted and enforced server-side; the dashboard must never expose secrets or imply control over Cloudflare billing. The CI workflow is retained, must reject tracked production/development .env files, and must never perform destructive production data cleanup. The Admin Control Center is incomplete until API, schema, UI, role enforcement, tests and operational evidence all exist.
