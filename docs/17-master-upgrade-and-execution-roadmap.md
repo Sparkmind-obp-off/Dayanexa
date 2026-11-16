@@ -1,3 +1,5 @@
+> **Canonical authority:** [DAYANEXA Canonical Master System](00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md) is the single top-level scope and sequencing authority. The [Full Implementation Master Prompt](../prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md) is the execution contract. This roadmap is the phase tracker and must stay synchronized.
+
 # DAYANEXA V3 — Master Upgrade & Execution Roadmap
 
 **Version:** 3.0  
