@@ -3,9 +3,9 @@
 **Version:** 3.0 · **Canonical architecture:** Demand-to-Execution · **Updated:** 16 November 2026
 
 **Document type:** Canonical implementation contract  
-**Version:** 2.0  
+**Historical baseline:** V2.0 (retained as implementation history)  
 **Date:** 16 November 2026  
-**Status:** V2 canonical execution contract; implementation and production activation remain gated  
+**Status:** V3 canonical Demand-to-Execution contract; implementation and production activation remain gated  
 **Repository:** `Sparkmind-obp-off/Dayanexa` · `main`  
 **Product:** Agentic Opportunity & Execution OS
 
