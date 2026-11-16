@@ -26,6 +26,10 @@ No secrets in source/browser/logs/prompts/Git. Keep .env.example; prohibit .env.
 
 Production D1 migrations, secrets, provider activation, paid use, external account connection, external contact, public demo, live payment, refund, payout and deployment require explicit owner approval. No silent paid fallback, overage, top-up, subscription, proxy spend or billing-plan changes. Never rotate accounts to evade rate limits, 429, bans, suspension, trial/free-tier restrictions or terms. Unknown/stale quota, price, authorization or source permission fails closed. UI/CRUD/docs/mocks/historical CI runs are not proof.
 
+## Explicit non-goal: do not turn this implementation into a member-role change
+
+The user has clarified that the requested work is not about changing their account from `member`, changing platform roles, changing bootstrap ownership, or editing account records. Do not mutate role or membership data and do not spend implementation batches on the role label. Audit identity/access only as a required security dependency for V3 (authorization, tenant isolation, least privilege, and protected operations). The actual objective is to implement and verify the complete Demand-to-Execution product, all five engines, the 10 domains, the 15 workspaces, provider governance, durable workflows, market delivery and verified economics. A role-label change is never evidence of V3 completion.
+
 ## System architecture
 
 Keep one logical orchestrator, one Command Center, modular monolith and canonical lifecycle. Ten domains: Market Perception; Demand Intelligence; Opportunity Intelligence; Solution Intelligence; Capability Foundry; Product & Commercial Engine; Agentic Execution Network; Quality, Delivery & Outcome; Economic & Settlement Engine; Learning & Evolution Engine.
