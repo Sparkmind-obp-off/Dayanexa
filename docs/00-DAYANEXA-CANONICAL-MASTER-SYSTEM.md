@@ -17,7 +17,7 @@ This file is the single top-level source of truth. Detailed contracts remain bin
 - `docs/24-batch-v2-code-audit.md` — dated source audit; refresh against current HEAD before implementation.
 - `docs/25-admin-resource-control-center.md` — admin control plane.
 - `docs/26-provider-runtime-governance.md` — provider account/quota/runtime/fallback rules.
-- `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.
+- `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.\n- `docs/28-production-build-artifact-and-pages-deployment.md` — canonical CI artifact provenance, protected Cloudflare Pages deployment, production smoke tests and rollback contract.
 - `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — execution prompt.
 
 Precedence: this master governs product intent, scope and phase order; detailed specs govern contracts; ADRs govern approved deviations. Source code is implementation evidence, not permission to silently change product intent.
@@ -209,7 +209,7 @@ React/Vite/TypeScript; Hono on Cloudflare Workers/Pages; Clerk Production; D1; p
 
 Start modular monolith, not microservices. DAYANEXA owns domain model, lifecycle, data, workflows, policy, auth, audit, provider registry, cost control, payment state, ledger and learning. Providers are replaceable adapters, never business sources of truth.
 
-CI is GitHub Actions `.github/workflows/ci.yml`; template `docs/ci/ci.workflow.yml`. Deployment to Cloudflare BYOK/manual is separate from Git push until verified reproducible integration exists.
+CI is GitHub Actions `.github/workflows/ci.yml`; template `docs/ci/ci.workflow.yml`. A Git push is not a deployment. Every production release must build from an exact commit, produce a scanned/provenanced artifact, deploy that exact artifact to the `dayanexa` Pages project through an approved protected release path, and record deployment ID/commit parity. Follow `docs/28-production-build-artifact-and-pages-deployment.md`. No deployment job may run migrations or mutate secrets, Clerk providers, payments or production data.
 
 ## 12. Security, privacy and resilience
 
@@ -255,7 +255,15 @@ Classify every capability as:
 
 Known historical evidence: admin batch commit `6e7b4c46908356fdb78f1c399e68a413694a3479` had CI run `43806769240` PASS. Provider governance documentation was later updated, including prompt commit `3cd2fdf9ff9fdacbb3c01389adb51e28649c76fd`. Those CI results do not prove later commits. Inspect current HEAD and Actions before claiming latest CI is green.
 
-Admin UI and governance docs were not thereby deployed to Cloudflare. Cloudflare Pages had previously not been connected to GitHub; deployment was manual via Wrangler/Cloudflare BYOK. Verify current state. Google login and Clerk webhook secret were previous production gates; verify current status. Do not claim auth or deployment complete from source alone.
+Admin UI and governance docs were not thereby deployed to Cloudflare. Cloudflare Pages had previously not been connected to GitHub; deployment was manual via Wrangler/Cloudflare BYOK. Verify current state. Google login and Clerk webhook secret were previous production gates; verify current status. Current incident: the Vite build-time public-key source fix is committed and exact CI run `43847796716` passed for `2cd66e2dc0a9496417df8e2eec7438b016eb0922`; however no production artifact deployment or post-deployment Google Sign-In verification has been proven. Keep status **SOURCE FIX PASS / CI PASS / PRODUCTION DEPLOYMENT PENDING** until docs/28 acceptance criteria pass. Do not claim auth or deployment complete from source alone.
+
+## 14A. Production build and deployment contract
+
+All release states are distinct and must be evidenced separately: source committed, CI passed for exact SHA, production artifact built/scanned, artifact deployed, domain smoke passed, and Google authentication verified. Artifact provenance must include workflow run, commit SHA, artifact identity/checksum and Cloudflare Pages deployment ID. Do not infer one state from another.
+
+The Clerk publishable-key incident is the active example: Vite requires a build-time value; runtime Pages variables cannot rewrite an existing bundle. Build from the corrected commit, inspect the output, scan for secrets, deploy only the exact artifact, then test the live domain and Google Sign-In. A manual/protected deployment is required until a reproducible approved pipeline exists. Missing credentials/artifact/project identity means stop, not improvise.
+
+Deployment approval is scoped to the frontend bundle only. It does not authorize D1 migrations, Clerk dashboard changes, secret changes, payment changes, provider spend, billing changes or data deletion. See `docs/28-production-build-artifact-and-pages-deployment.md`.
 
 ## 15. Phased implementation and exit gates
 
