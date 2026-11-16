@@ -1,109 +1,115 @@
-# DAYANEXA — Production Build, Artifact & Cloudflare Pages Deployment Contract
+# DAYANEXA — Manual Production Build & Cloudflare Pages Deployment
 
-**Status:** Canonical operational contract. Production deployment remains pending until a reproducible artifact is built, deployed and verified.
+**Status:** Canonical operational contract. Production deployment remains pending until the corrected build is deployed and verified.
 **Project:** DAYANEXA
 **Repository:** `Sparkmind-obp-off/Dayanexa`
 **Branch:** `main`
 **Cloudflare Pages project:** `dayanexa`
 **Production domain:** https://dayanexa.biz.id
+**Release method:** Manual local validation and Cloudflare Wrangler. GitHub Actions CI/CD is intentionally retired.
 
-## 1. Purpose
+## 1. Operating decision
 
-A source commit, successful CI run, uploaded build artifact, Cloudflare deployment and working production application are five distinct states. The system must record each state separately and link them by immutable commit SHA, workflow run ID, artifact ID/checksum and Cloudflare deployment ID.
+DAYANEXA does not use GitHub Actions, a GitHub workflow, or automatic CI/CD for validation or deployment. GitHub is the source repository. A push to `main` does not deploy anything.
 
-A successful CI build does not prove production deployment. A successful Pages upload does not prove Clerk authentication or customer journeys work.
+The operator performs checks locally, builds the exact source checkout, authenticates Wrangler with the intended Cloudflare account, and deploys manually to the Pages project `dayanexa`. Do not recreate a GitHub Actions workflow unless the owner explicitly changes this decision.
+
+The repository may retain local npm scripts such as `check`, `audit`, `build`, and `deploy`. A local script named `ci`, if present, is not a GitHub Actions service; prefer the explicit commands below so the operator can see each stage.
 
 ## 2. Current incident baseline
 
 - The frontend consumes `import.meta.env.VITE_CLERK_PUBLISHABLE_KEY`.
-- The canonical public Clerk key is available to the build through the resolution contract in `vite.config.ts` and `wrangler.jsonc`.
-- The source fix is present in commit `630ba760fad7656811bbe5346283041e96accd92`; subsequent documentation/prompt updates culminated in commit `2cd66e2dc0a9496417df8e2eec7438b016eb0922`.
-- GitHub Actions run `43847796716`, for exact commit `2cd66e2dc0a9496417df8e2eec7438b016eb0922`, completed with conclusion `success`.
-- The Pages project has previously been observed as ad-hoc/manual, without a connected GitHub source. Re-check current configuration before relying on this historical observation.
+- The Vite build-time source fix is committed in `630ba760fad7656811bbe5346283041e96accd92`.
+- The historical GitHub Actions run `43847796716` passed for `2cd66e2dc0a9496417df8e2eec7438b016eb0922`. This is historical evidence only; GitHub Actions is retired and the run does not prove the latest source or production deployment.
+- The prior Pages project was observed as ad-hoc/manual and not connected to GitHub. Reconfirm the actual Wrangler account and project before deployment.
 - A Pages runtime variable cannot alter an already-built Vite bundle.
-- The attempted deployment did not complete. Production remains pending; do not claim the missing-key screen or Google Sign-In issue is fixed.
+- No production deployment from the corrected build or post-deployment Google Sign-In verification has been proven in the recorded baseline.
+- Keep status **SOURCE FIX COMMITTED / PRODUCTION DEPLOYMENT PENDING** until the verification in this document passes.
 
-## 3. Required release pipeline
+## 3. Manual release procedure
 
-### Stage A — Verify source
+### Stage A — Confirm source and environment
 
-1. Resolve the exact target commit SHA from `main`.
-2. Confirm the commit includes the Vite build-time Clerk key contract.
-3. Confirm no secret or environment-specific private file is tracked.
-4. Run the canonical CI workflow against that exact SHA.
+1. Start from a clean local checkout of `Sparkmind-obp-off/Dayanexa`, branch `main`.
+2. Record the exact commit SHA (`git rev-parse HEAD`) and inspect the intended diff.
+3. Confirm the Vite Clerk key resolution fix exists in that checkout.
+4. Confirm `.env.production` and `.env.development` are not tracked. Keep only safe examples such as `.env.example`.
+5. Confirm the local Node version meets the repository requirement and use the committed lockfile.
 
-### Stage B — Build a production artifact
+### Stage B — Run local checks and build
 
-1. Use a clean checkout of the exact SHA and the committed lockfile.
-2. Install with `npm ci`; do not use an unpinned dependency install.
-3. Run typecheck, tests, migration validation, secret scan, dependency audit and production build.
-4. Inspect the generated frontend bundle for the expected public Clerk publishable-key prefix and verify that the missing-key fatal branch is not the active production configuration.
-5. Scan generated output for secret keys, tokens and private environment values. The public publishable key is allowed; Clerk secret/JWT/webhook keys are not.
-6. Package the actual Pages output directory as a CI artifact. Record artifact name, workflow run ID, commit SHA, creation time and checksum.
-7. Do not build from an old local `dist/` directory or from a different commit.
+Run these commands in order; stop if any command fails:
 
-### Stage C — Deploy the exact artifact
+```bash
+npm ci
+npm run check
+npm run audit
+npm run build
+```
 
-Preferred path: a dedicated, manually triggered GitHub Actions production deployment workflow, using the previously verified artifact from the same commit and a protected `production` environment.
+Then inspect the generated `dist/` output:
 
-The deploy job must:
-- require explicit manual dispatch and production-environment approval;
-- verify the artifact SHA matches the selected release SHA;
-- use a narrowly scoped Cloudflare API token and account ID supplied through protected GitHub Actions secrets;
-- deploy only the `dayanexa` Pages project;
-- never print credentials or expose them to frontend build output;
-- never run D1 migrations, change secrets, modify Clerk provider settings, alter payment settings, delete data or change billing;
-- record the Cloudflare deployment ID, URL, environment, source commit and timestamp;
-- fail closed if required credentials, artifact provenance or project identity cannot be verified.
+- Confirm the expected public Clerk publishable-key prefix is present in the frontend bundle and the fatal missing-key branch is not the active production configuration.
+- Scan the output for secret keys, tokens and private environment values. The public publishable key is allowed; Clerk secret/JWT/webhook keys and provider credentials are not.
+- Confirm the output is from the exact checkout/commit recorded in Stage A. Do not deploy a stale or copied `dist/` directory.
 
-If the protected secrets or artifact are unavailable, stop and report the exact missing prerequisite. Do not invent credentials, change account security or bypass approvals.
+### Stage C — Authenticate and deploy with Wrangler
 
-Manual Wrangler deployment is an acceptable controlled alternative only when the operator can verify the exact artifact, project, account and deployment result. Record the same provenance fields.
+1. Authenticate Wrangler using the operator's Cloudflare login flow (for example, `npx wrangler login`) or an already approved local credential. Never paste tokens into chat, source files or Git.
+2. Run `npx wrangler whoami` and verify the returned Cloudflare account is the intended account.
+3. Verify the Pages project name is exactly `dayanexa`. If account or project identity is uncertain, stop.
+4. Deploy using the repository's `npm run deploy` command. Its current package script runs the production build and then `wrangler pages deploy dist --project-name dayanexa --branch main`.
+5. Record the exact source SHA, command result, deployment ID, deployment URL and timestamp. Verify the Cloudflare deployment corresponds to the intended project and branch.
+
+The `npm run deploy` command rebuilds before upload. The separate checks in Stage B are still required because the deploy script itself does not run the complete validation suite.
 
 ### Stage D — Production verification
 
-After deployment, verify all of the following against the production domain and exact deployed build:
+Verify against https://dayanexa.biz.id and the exact deployed build:
 
 1. Homepage returns successfully and the fatal missing Clerk key screen is gone.
-2. The served JavaScript bundle corresponds to the artifact and commit being deployed.
+2. Served JavaScript bundle corresponds to the corrected build.
 3. Google Sign-In starts and returns through the configured Clerk callback.
 4. Session creation, refresh and sign-out work.
 5. Authenticated `/api/v1/me` returns the correct principal and role.
 6. Unauthenticated `/api/v1/me` returns 401.
 7. Tenant isolation and role authorization remain enforced.
-8. No Clerk secret, JWT verification key or webhook signing secret is present in the browser bundle.
-9. Clerk webhook configuration and delivery are checked separately; a missing webhook secret remains a blocker for webhook-dependent functions.
+8. No Clerk secret, JWT verification key, webhook signing secret or provider token is present in the browser bundle.
+9. Clerk webhook configuration/delivery is checked separately; a missing webhook secret remains a blocker for webhook-dependent functions.
 10. Customer, contributor and operator journeys are tested in a controlled environment.
 
-Record browser/API evidence, timestamps, deployed commit, Pages deployment ID and remaining failures. A homepage 200 alone is not a production acceptance test.
+Record timestamps, browser/API evidence, source SHA, Pages deployment ID/URL and remaining failures. A homepage 200 or successful Wrangler upload alone is not production acceptance.
 
-## 4. Approval and safety boundaries
+## 4. Strict scope and safety
 
-The user's approval to publish the Clerk bundle is limited to the frontend artifact deployment described here. It does not authorize:
-- D1 migrations or data mutation;
+The existing approval to publish the corrected frontend bundle is limited to frontend deployment. It does not authorize:
+
+- D1 migrations or production data mutation;
 - Clerk dashboard/provider/callback changes;
-- secret creation, rotation or exposure;
-- payment gateway or live-payment changes;
-- provider spend, paid fallback or plan upgrades;
-- customer/contributor/financial/audit data deletion;
-- unrelated Cloudflare project or domain changes.
+- secret creation, rotation, deletion or exposure;
+- payment gateway, live-payment or billing changes;
+- provider spend, paid fallback, top-up or plan upgrades;
+- customer, contributor, financial, ledger, audit, D1 or R2 data deletion;
+- unrelated Cloudflare project, account, domain or DNS changes.
 
-Any additional action requires its own explicit approval.
+Do not run `npm run db:migrate:prod` or any production migration as part of a frontend deployment. Do not change Cloudflare secrets or bindings under this release approval. Any additional action requires its own explicit owner approval.
 
 ## 5. Rollback
 
-Keep the last known-good Pages deployment available. If smoke tests fail, stop promotion and use the Cloudflare Pages rollback/redeployment mechanism for the exact prior deployment, subject to owner authorization. Do not roll back or mutate D1 data as part of a frontend rollback. Record incident, failed deployment and recovery evidence.
+Keep the last known-good Cloudflare Pages deployment available. If smoke tests fail, stop and use the Cloudflare Pages rollback/redeployment mechanism for the exact prior frontend deployment, subject to owner authorization. Never couple frontend rollback to destructive D1 rollback. Record the incident and recovery evidence.
 
 ## 6. Definition of done
 
 Release is complete only when:
-- CI passed for the exact commit;
-- production artifact provenance and checksum are recorded;
-- exact artifact is deployed to the correct Pages project;
-- Cloudflare deployment ID and commit parity are recorded;
-- production domain and Google Sign-In/session tests pass;
-- unauthenticated/authenticated API checks pass;
-- secret scan of the served bundle passes;
-- no unauthorized database, Clerk, payment, billing or data changes occurred.
+
+- the exact source SHA is recorded;
+- local install, checks, audit and production build passed;
+- generated bundle inspection and secret scan passed;
+- Wrangler account and Pages project identity were confirmed;
+- the intended build was deployed and deployment ID/URL recorded;
+- production domain and Google Sign-In/session tests passed;
+- authenticated/unauthenticated API checks passed;
+- tenant/role authorization checks passed;
+- no unauthorized database, Clerk, payment, billing, provider-spend or data changes occurred.
 
 Until all conditions pass, status must remain **DEPLOYMENT PENDING** or **PRODUCTION VERIFICATION PENDING**, whichever is accurate.
