@@ -10,6 +10,7 @@ import { intel } from "./routes/intel";
 import { me } from "./routes/me";
 import { metrics } from "./routes/metrics";
 import { ops } from "./routes/ops";
+import { providerAdmin } from "./routes/provider-admin";
 import { publicRoutes } from "./routes/public";
 import { webhooks } from "./routes/webhooks";
 
@@ -29,6 +30,7 @@ export function createApp() {
   secured.route("/", me);
   secured.route("/", intel);
   secured.route("/", ops);
+  secured.route("/", providerAdmin);
   secured.route("/", commerce);
   secured.route("/", billing);
   secured.route("/", governance);
