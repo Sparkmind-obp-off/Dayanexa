@@ -97,7 +97,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 **Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, CI and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
 
-**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and current CI. The frontend Vite build must resolve the public Clerk key using the canonical build contract in docs/27; runtime Pages vars do not modify an already-built bundle. Verify the actual deployed JS bundle and Google auth flow. No unrelated Clerk changes.
+**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and current CI. The frontend Vite build must resolve the public Clerk key using docs/27. Runtime Pages vars do not modify an already-built bundle. Build and scan a production artifact from the exact approved commit, record its checksum/provenance, deploy that exact artifact to the `dayanexa` Pages project through the protected release process in docs/28, then verify the served bundle and Google auth flow. A CI pass alone is not deployment proof. No unrelated Clerk changes.
 
 **Batch 2 — Customer/contributor/operator journeys:** complete flows and server-side permissions; expand cross-tenant tests across nested IDs, joins, artifacts and background jobs.
 
@@ -136,3 +136,26 @@ Do not declare V3 complete until five engines run end-to-end; persistent cluster
 Every batch reports branch and exact HEAD; changed files/migrations; implemented versus reused paths; commands and exact test results; CI URL tied to commit; provider calls/account label/usage/cost; browser/production evidence; deployment state; pending defects and owner approvals; what was not tested; whether production D1, secrets, spend, outreach, live payment or deployment was touched.
 
 Never claim success before evidence. Keep canonical master, audit, roadmap and prompt synchronized. Continue in small reviewable batches; do not stop after documentation.
+
+
+## Production artifact and Cloudflare Pages release — mandatory execution contract
+
+Follow `docs/28-production-build-artifact-and-pages-deployment.md` as binding release procedure.
+
+The current Clerk incident status is:
+- Vite build-time public-key source fix committed.
+- GitHub Actions run `43847796716` passed for exact SHA `2cd66e2dc0a9496417df8e2eec7438b016eb0922`.
+- Production artifact deployment and Google Sign-In verification remain pending. Do not report them as complete.
+
+Implement a reproducible, reviewable release path:
+1. Build from a clean checkout of an exact commit using `npm ci` and the committed lockfile.
+2. Run the full CI checks and production build; inspect generated assets for Clerk public-key presence and scan for secrets.
+3. Upload the built Pages output as an immutable workflow artifact with commit SHA, workflow run ID, artifact name and checksum.
+4. Provide a separate manual production deploy workflow, gated by the protected `production` environment. Deploy only the selected artifact whose SHA matches the requested release. Use narrowly scoped Cloudflare credentials from protected GitHub Actions secrets; never invent or print credentials.
+5. Target only Pages project `dayanexa`. Do not run D1 migrations or modify Cloudflare secrets, Clerk providers, payment configuration, billing or production data.
+6. Record Cloudflare deployment ID, deployment URL, artifact checksum and commit parity.
+7. Run production domain, served-bundle, Google Sign-In, session refresh/sign-out, authenticated/unauthenticated `/api/v1/me`, role and tenant-isolation smoke tests.
+8. If required secrets, artifact provenance, environment approval or project identity is unavailable, stop and report the exact blocker. Do not bypass the gate or fall back to an unverified build.
+9. Keep the last known-good frontend deployment available for controlled rollback. Never couple frontend rollback to destructive D1 rollback.
+
+Do not claim production fixed until all production verification criteria pass. A 200 homepage response alone is insufficient. Deployment approval is scoped to publishing the frontend bundle and does not authorize migrations, secret changes, Clerk dashboard changes, payment changes, provider spend or data deletion.
