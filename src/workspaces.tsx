@@ -410,7 +410,7 @@ export function AdminControl() {
           { h: "Mode", r: (p: any) => <span className="small">{p.mode}</span> },
           { h: "Cap harian", r: (p: any) => p.dailyCap ?? "Belum ditetapkan" },
           { h: "Satuan", r: (p: any) => p.billingUnit },
-        ]} /></Q>
+        ]} />}</Q>
       </Section>
       <Section title="Biaya & pemakaian provider" sub="Biaya USD ditampilkan terpisah dari biaya misi IDR. Angka biaya tetap mengikuti status estimasi/realisasi sumber.">
         <Q q={providers}>{(d) => <Table rows={d.usage} empty="Belum ada pemakaian tercatat" cols={[
@@ -418,7 +418,7 @@ export function AdminControl() {
           { h: "Status", r: (u: any) => <Badge v={u.status} /> }, { h: "Panggilan", r: (u: any) => u.calls },
           { h: "Unit", r: (u: any) => `${u.units} ${u.unit_type}` },
           { h: "Biaya tercatat", r: (u: any) => usd(u.cost_usd_micros) },
-        ]} /></Q>
+        ]} />}</Q>
       </Section>
       <p className="small"><Link to="/app/w/learning">Lihat analitik provider</Link> · <Link to="/app/w/ledger">Lihat biaya langsung dan ledger misi</Link></p>
     </div>}
@@ -429,7 +429,7 @@ export function AdminControl() {
         { h: "Item", r: (b: any) => b.items_returned }, { h: "Diterima", r: (b: any) => b.items_accepted ?? "—" },
         { h: "Biaya", r: (b: any) => usd(b.cost_usd_micros) }, { h: "Hasil", r: (b: any) => <Badge v={b.success ? "success" : "failure"} /> },
         { h: "Waktu", r: (b: any) => dt(b.created_at) },
-      ]} /></Q>
+      ]} />}</Q>
     </Section>}
     {tab === "Cloudflare & CI" && <div className="stack">
       <Section title="Runtime & bindings" sub="Status binding berasal dari health endpoint produksi yang aman dibaca. Ini bukan bukti backup/restore atau ketahanan workflow.">
