@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Date:** 16 November 2026  
 **Authority:** DAYANEXA V3 Demand-to-Execution Master System  
-**Status:** Canonical requirement; initial owner-only dashboard shell and read/verify views are implemented. Persistent provider policies, editable Actor registry, budget enforcement controls and full customer administration remain pending. The detailed runtime governance contract is defined in docs/26-provider-runtime-governance.md; runtime enforcement remains pending.
+**Status:** Canonical requirement. The owner-only dashboard shell and read/verify views are implemented. Source-level provider policy/account/Actor APIs and Provider Runtime Gateway enforcement are present in migrations 0007/0008, `apps/api/src/providers/gateway.ts`, `apps/api/src/routes/provider-admin.ts` and `tests/gateway.test.ts`; however, production D1 had only migrations 0001–0006 applied at the latest read-only inspection, so the gateway is not production-active. Full customer administration, complete operational controls, quota refresh, observability and deployment/backup evidence remain pending. The detailed runtime governance contract is defined in docs/26-provider-runtime-governance.md.
 
 ## 1. Purpose
 
