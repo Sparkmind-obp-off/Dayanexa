@@ -157,3 +157,55 @@ Add Demo/MarketPresentation/consent records, preview revocation, presentation ap
 This audit is based on source code and schema inspection at the stated Git commit. It does not prove production credentials, external provider entitlements, current actor compatibility, real Threads access, production D1 state, deployed bundle parity, or actual end-to-end behavior. The V2 test files declare tests for payment, lifecycle and provider controls; this audit did not execute those tests. Fresh local validation using the current package scripts and real controlled smoke tests remain separate acceptance evidence.
 
 No production database migration, provider activation, paid Actor run, payment configuration or deployment was performed as part of this audit.
+
+
+---
+
+# C. Fresh V3 implementation audit — 16 November 2026
+
+**Current documentation HEAD:** `398f39aa08d91ca16e85d78fa47d5b459a88fa92` (two documentation-only scope clarifications after the source snapshot).  
+**Source snapshot inspected:** `5a7a0b839041a0949df874eccb67116b286e583c`.  
+**Method:** GitHub source/tree inspection and prior read-only Cloudflare production inspection. No local checkout, test/build execution, production migration, provider call, browser sign-in, customer contact or deployment was performed in this audit batch.
+
+## C1. Source and production baseline
+
+- Repository `main` source snapshot `5a7a0b8` contains 165 Git tree entries.
+- Production Cloudflare Pages project `dayanexa`, custom domain `dayanexa.biz.id`, deployment ID `92347b6c`, source commit `5a7a0b8` (read-only deployment inspection).
+- Production D1 `dayanexa-production`: migrations `0001`–`0006` applied; `0007_provider_policy_actor_registry.sql` and `0008_provider_runtime_gateway.sql` not applied at the time of inspection. No migration was run.
+- Package scripts provide local `typecheck`, `test`, migration/secret checks, `release:check`, `build`, `deploy` (manual Wrangler after release gate) and `smoke:prod`. No GitHub Actions workflow is part of the current release model.
+- `smoke:prod` is a narrow unauthenticated health/auth/homepage smoke check; it does not prove Google sign-in, owner workflows, customer journeys, contributor operations or provider execution.
+
+## C2. Evidence-backed implementation matrix
+
+| V3 capability | Source evidence inspected | Current classification | Gap / proof still required |
+|---|---|---|---|
+| Demand Discovery | `routes/intel.ts`: source CRUD, signal CRUD, Tavily search, Firecrawl extract, Actor run, benchmark history; adapters invoke `governedCall` | Partial, real synchronous adapters | Durable DiscoveryJob/SourceRun lifecycle, scheduling, pagination/resume/cancel/recovery, source-specific permission review, end-to-end live evidence and reconciled cost |
+| Demand Intelligence | Migration 0002 has `demands`, `demand_evidence`, `opportunity_assessments`; routes expose demand CRUD/evidence/transitions | Partial | No `demand_clusters`, membership/version/split/merge, independent evidence scoring rubric, validation experiment and corroboration workflow found in inspected migrations/routes |
+| Opportunity Intelligence | `routes/ops.ts` exposes opportunity CRUD, assessments, AI assist and transitions | Partial | Must prove traceable demand-to-opportunity creation, independent score dimensions, review gates and repeatable acceptance |
+| Capability & Solution Foundry | Migration 0002 has `solutions`, `capabilities`, `capability_gaps`; routes create/edit solutions and capabilities and add gaps | Partial | No complete versioned SolutionSpec, capability build/acquire/partner lifecycle, readiness test/evidence gate or costed dependency plan established by inspected schema/routes |
+| Agentic Execution | Migration 0002 has `agents`, `missions`, `tasks`, `artifacts`, `quality_reviews`; ops routes create missions/tasks, review, deliver and accept | Partial foundation | No canonical AgentRun/ToolInvocation/TaskDependency execution records or durable workflow/queue orchestration found in inspected tree/schema; agent records and task CRUD do not prove agent execution |
+| Market Delivery | Ops routes expose offer revisions/publication request/withdraw/accept; mission delivery/acceptance/settlement; commerce routes expose payment, refund, payout and ledger operations | Partial | No explicit MarketPresentation/DemoAccess/consent lifecycle or end-to-end immutable quote-hash acceptance → verified payment → accepted delivery → settlement proof established from inspected migrations/routes |
+| Provider governance | Migrations 0007/0008; `gateway.ts`; provider-admin routes expose policies, accounts, Actors, quota, approvals, fallback, reservations, breakers | Source implemented, production inactive pending migrations/configuration | Apply only after explicit owner approval; configure verified policies/accounts/quota; prove deployed source parity and a safely authorized, budget-capped test |
+| Admin & Resource Control | 15th workspace exists; provider-admin APIs and AdminControl UI source exists | Partial | Full customer administration, persisted operational policy controls, deployment/backup/restore evidence and complete observability still need acceptance proof |
+| Economic & Settlement | Commerce routes expose payment intents, reconcile, refunds, payouts, ledger journals, costs and mission economics; ops routes expose mission settlement | Partial foundation | Prove signed/deduplicated gateway webhook, reconciliation, maker-checker refund/payout, contributor payable and ledger invariants on real approved sandbox/pilot flows |
+| Learning & Evolution | `learning_records` table and mission learning route exist | Partial | Prove feedback ingestion, evidence-linked outcome metrics, model/rubric versioning and a controlled next-discovery improvement loop |
+
+## C3. Important corrections to stale documentation
+
+1. Docs/25's prior status statement that provider policies and the runtime gateway were wholly pending is stale relative to source snapshot `5a7a0b8`: migrations, gateway implementation, provider-admin APIs and gateway tests exist in source. They are **not production-active** because migrations 0007/0008 were not applied in the inspected production D1.
+2. Docs/26 correctly describes source-level gateway implementation and the production migration gate, but quota refresh automation, durable queue/workflow processing and full V3 engine completion remain open.
+3. Workspace presence and CRUD routes are not acceptance proof. The five engines remain partial until their end-to-end acceptance paths are implemented and tested.
+4. Do not spend this workstream changing the user's role, membership, bootstrap identity or the `member` label. Identity/access is audited only as a required security foundation.
+
+## C4. Execution order from this audit
+
+1. Build an exact source-to-requirement traceability register for docs/18–23 and docs/29, including every API route, table, permission, UI surface, background process and test.
+2. Implement persistent demand clustering and validation as the first missing domain capability; add additive migration, tenant-scoped APIs, UI and regression/integration tests.
+3. Implement durable discovery jobs and source-run lifecycle with idempotency, pause/resume/cancel/recovery and cost reconciliation.
+4. Implement versioned SolutionSpec and test-backed capability readiness.
+5. Implement durable AgentRun/ToolInvocation/task graph and real controlled tool execution with approval, budget and artifact evidence.
+6. Implement consented demo/market presentation, immutable offer/quote acceptance and full verified payment-to-settlement lifecycle.
+7. Complete Admin Control Center, provider quota refresh, observability and operational runbooks.
+8. Run local release checks from a real checkout; separately verify Google sign-in and owner/customer/contributor/finance browser journeys. Keep production migration, provider spend, live payments and deployment behind explicit approval.
+
+**Audit conclusion:** DAYANEXA is a working V2/V3 foundation with several real workflows and a source-level provider runtime gateway. It is not yet a complete, production-proven V3 Demand-to-Execution OS. The next work must be source implementation and test evidence, not another round of conceptual documentation.
