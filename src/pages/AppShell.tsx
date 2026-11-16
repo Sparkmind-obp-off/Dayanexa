@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton } from "@clerk/react";
 import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox } from "lucide-react";
 import { Brand } from "./Public";
 import { useSession } from "../lib/session";

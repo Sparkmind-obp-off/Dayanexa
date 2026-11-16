@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { RedirectToSignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { Show } from "@clerk/react";
 import { SessionProvider } from "./lib/session";
 import { Loading } from "./components/ui";
 import { Catalog, Contact, Faq, HowItWorks, Landing, Legal, Pricing, PublicLayout, SignInPage, SignUpPage } from "./pages/Public";
@@ -9,8 +9,8 @@ const AppShell = lazy(() => import("./pages/AppShell"));
 
 function Protected() {
   return <>
-    <SignedIn><SessionProvider><Suspense fallback={<Loading label="Memuat aplikasi…" />}><AppShell /></Suspense></SessionProvider></SignedIn>
-    <SignedOut><RedirectToSignIn /></SignedOut>
+    <Show when="signed-in"><SessionProvider><Suspense fallback={<Loading label="Memuat aplikasi…" />}><AppShell /></Suspense></SessionProvider></Show>
+    <Show when="signed-out"><Navigate to="/sign-in" replace /></Show>
   </>;
 }
 

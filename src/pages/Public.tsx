@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { SignedIn, SignedOut, SignIn, SignUp, UserButton } from "@clerk/clerk-react";
+import { Show, SignIn, SignUp, UserButton } from "@clerk/react";
 import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { idr, usePublic } from "../lib/api";
 import { Loading, ErrorBox } from "../components/ui";
@@ -14,8 +14,8 @@ export function PublicLayout() {
         <NavLink to="/how-it-works">Cara kerja</NavLink><NavLink to="/catalog">Layanan</NavLink><NavLink to="/pricing">Harga</NavLink><NavLink to="/faq">FAQ</NavLink><NavLink to="/contact">Kontak</NavLink>
       </div>
       <div className="grow" />
-      <SignedOut><Link className="btn ghost" to="/sign-in">Masuk</Link><Link className="btn primary" to="/sign-up">Mulai gratis</Link></SignedOut>
-      <SignedIn><Link className="btn primary" to="/app">Buka aplikasi</Link><UserButton /></SignedIn>
+      <Show when="signed-out"><Link className="btn ghost" to="/sign-in">Masuk</Link><Link className="btn primary" to="/sign-up">Mulai gratis</Link></Show>
+      <Show when="signed-in"><Link className="btn primary" to="/app">Buka aplikasi</Link><UserButton /></Show>
     </nav></header>
     <main id="main"><Outlet /></main>
     <footer className="footer"><div className="wrap cols">
