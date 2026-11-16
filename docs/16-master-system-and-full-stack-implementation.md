@@ -367,7 +367,7 @@ Initial cost doctrine:
 
 Apify vs Scrape.ly must be selected through a source-specific benchmark: coverage, freshness, completeness, success rate, price per accepted evidence, legal permissions and operational reliability. Tavily search and Firecrawl extraction are complementary, not interchangeable. Workers AI is inference, not workflow orchestration. Cloudflare Workers AI's daily free allocation, rate limits, model catalog and per-model pricing can change; check current Cloudflare documentation and the actual account dashboard before activating models. Local Wrangler inference also consumes account allocation. GroqCloud remains optional and disabled by default; never silently route to a paid model or Unified Billing.
 
-## 14. V2 operating model — four gated delivery phases
+## 14. V2 operating model (historical baseline; superseded by V3 sections 20–28)
 
 DAYANEXA V2 is executed in four ordered phases. Do not skip an earlier gate because a later screen exists. The phases intentionally combine related work so that identity, customer value, monetization and operating control become one coherent product.
 
@@ -573,7 +573,7 @@ For each external dependency, report exact required owner action and the evidenc
 - `docs/17-master-upgrade-and-execution-roadmap.md`
 - `apps/api/README.md`
 
-## 19. V2 decision log and owner constraints
+## 19. V2 decision log (historical baseline; V3 overrides where explicitly stated)
 - Canonical brand/product remains DAYANEXA; repo `Sparkmind-obp-off/Dayanexa`, branch `main`.
 - Genspark is not a required build or execution dependency. Implementation must be executable through the repository, Cloudflare, GitHub and verified provider interfaces.
 - Google-only Clerk Production remains the selected identity policy.
