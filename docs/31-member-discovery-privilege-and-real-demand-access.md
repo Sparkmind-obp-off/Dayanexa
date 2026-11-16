@@ -98,3 +98,85 @@ Use existing entities when equivalent and add only audited additive migrations. 
 Audit existing discovery routes, migrations, provider gateway, Actor registry and plan resolver; implement policy and atomic entitlement reservations; curate sources/Actor recipes and permission review; build member Discovery UI and tenant-scoped APIs; integrate real providers only through the gateway; implement usage/cost reconciliation and audit; add deterministic tests and opt-in, capped, owner-approved provider smoke tests; update the source audit with implemented/tested/blocked/production-verified states separately.
 
 **Non-negotiable:** A real, bounded opportunity for every member to discover real demand is required. Static UI, sample data, mocked Actors, documentation-only promises or unmetered provider calls do not satisfy this contract.
+
+
+## 12. Omni-Channel Demand Discovery — member-controlled source selection
+
+Member Discovery must support a flexible, expandable source catalog and three discovery modes. It must not be limited to a fixed set of hard-coded channel buttons.
+
+### 12.1 Three discovery modes
+
+1. **Single-channel:** member selects one channel/source family and optionally a specific public community, subreddit, page, forum, topic or search scope.
+2. **Multi-channel:** member selects multiple channel/source families for one coordinated discovery campaign. DAYANEXA runs eligible source tasks, normalizes results, deduplicates cross-channel evidence and compares demand signals.
+3. **Omni / automatic:** member provides the demand brief and desired market/category; DAYANEXA recommends and selects the most relevant eligible channels based on source coverage, relevance, permission, provider readiness, available quota, cost and evidence diversity. Show the proposed channels and reasons before dispatch where practical; never silently select an unapproved paid route.
+
+The member can start with one channel and later expand the same brief to more channels, subject to remaining allowance and resource caps.
+
+### 12.2 Channel and community catalog
+
+Provide a discoverable, searchable, extensible catalog of source families and their available public subspaces. Initial examples:
+- Threads: public posts, topics, keywords and permitted public conversation sources.
+- Reddit: relevant public subreddits and public discussions.
+- Facebook: public pages, public posts and public groups only where the precise collection method is permitted.
+- YouTube: public videos and accessible public comments/discussions where permitted.
+- Web: public forums, Q&A, directories, business websites, public listings and other public pages.
+- Additional platforms and specialist communities can be added through reviewed source adapters without redesigning the member workflow.
+
+Catalog entries should expose platform, source type, topic/category, public/private/access status, geography/language, supported discovery intents, provider/Actor route availability, permission/commercial-use review status, freshness, limitations and availability. Do not list an unreviewed source as runnable. Support search by platform, topic, industry, geography, community name and demand category. Support member-supplied public URLs as discovery hints, but validate reachability and permission before collection.
+
+### 12.3 Demand intent and category taxonomy
+
+Members should be able to describe their own intent and optionally select one or more categories, including:
+- Service needs and unmet service demand.
+- Product needs, product gaps and purchase friction.
+- Customer complaints, recurring pain points and workarounds.
+- MSME/business operations, marketing, sales and administration needs.
+- Software, automation, AI and digital-tool needs.
+- B2B procurement, suppliers and operational needs.
+- Local/community needs by geography.
+- Education, skills and training needs.
+- Employment/task/work demand signals, without representing public posts as verified vacancies.
+- Other / custom demand brief.
+
+Categories are navigation and classification aids, not restrictive silos. Natural-language briefs and custom keywords must remain supported. DAYANEXA may infer additional categories but must label them as inferred and preserve the member's original intent.
+
+### 12.4 Campaign and quota semantics across channels
+
+A multi-channel or omni search is one **Discovery Campaign** containing one or more source-specific child jobs. The Free baseline of one guaranteed campaign per rolling 30 days (plus one conditional campaign when funded capacity allows) applies to the campaign, not one free run per selected channel. This prevents quota multiplication by selecting many channels.
+
+Each campaign has a visible total resource ceiling and child-job limits: maximum channels, Actors, pages/items, duration, concurrency and estimated/actual provider units/cost. The exact limits are configurable by plan and approved program budget. A campaign must reserve its total bounded resource envelope before dispatch, then reserve/reconcile child tasks atomically. If the campaign cannot fit within available quota or budget, explain which channels are unavailable and offer a smaller compliant scope; never silently exceed limits.
+
+The member can choose:
+- One channel.
+- Multiple named channels/communities.
+- Recommended channels for a category or brief.
+- Omni automatic selection.
+
+The member cannot select arbitrary Actor IDs or override provider caps. DAYANEXA resolves each selected source to a reviewed adapter/Actor. If one channel fails, report partial results honestly; do not silently substitute a paid provider or unauthorized source.
+
+### 12.5 Unified evidence and cross-channel intelligence
+
+Normalize source-specific output into canonical Source, Signal and Evidence records while retaining original provenance. Deduplicate identical or near-identical content across channels, identify cross-channel corroboration, distinguish independent sources from reposts, preserve timestamps and links, and avoid treating repeated copies as independent demand. Present:
+- Findings grouped by channel/community.
+- Common pain points and demand themes.
+- Differences between communities or geographies.
+- Evidence count and independent-source count separately.
+- Confidence, recency, source coverage and limitations.
+- Signals versus inferred demand hypotheses versus validated demand.
+
+A campaign summary must not claim market-wide prevalence from a small or biased sample. Report sampling limitations and unavailable channels.
+
+### 12.6 Safety and source eligibility
+
+Channel selection never overrides source access restrictions. Public pages/groups/communities are eligible only when the exact API/Actor method, account access and intended use are permitted. Private groups, closed communities, private messages and access-controlled content are excluded unless a separately reviewed lawful authorization path is explicitly implemented; no bypassing membership, login, CAPTCHA, anti-bot control, rate limit or platform terms. A URL submitted by a member is not proof of permission. No arbitrary Actor marketplace execution, credential exposure, unsolicited outreach or automated posting/messaging.
+
+### 12.7 Additional acceptance criteria
+
+13. Member can launch single-channel, multi-channel and omni campaigns from one Discovery workflow.
+14. Channel catalog is searchable/extensible and includes reviewed public community/source entries, not only platform-level names.
+15. Member can specify demand categories, natural-language briefs, keywords and geography, or choose a category-first workflow.
+16. Omni mode recommends/selects sources using relevance, permission, readiness, quota and cost; it does not imply every platform is always available.
+17. A multi-channel campaign consumes one campaign entitlement, with child tasks bounded by a single pre-reserved campaign resource envelope.
+18. Cross-channel evidence is normalized and deduplicated while retaining channel provenance and independent-source counts.
+19. Selecting many channels cannot multiply Free quota or bypass provider/program budgets.
+20. A member-supplied URL or community name is validated before collection; restricted or unreviewed sources are rejected or sent for review.
