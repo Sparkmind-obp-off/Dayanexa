@@ -54,3 +54,12 @@ npm run dev:web
 - Keep payment mode mock and live payment disabled until sandbox, webhook, reconciliation and owner approval.
 - No production D1 migration, paid Actor, provider spend beyond approved caps, external outreach, public demo deployment, refund or payout without explicit approval.
 - Respect source permissions, platform terms, privacy, copyright and opt-out requirements.
+
+
+## Canonical V3 master package
+
+- [Canonical Master System](docs/00-DAYANEXA-CANONICAL-MASTER-SYSTEM.md) — single source of truth for product, architecture, roles, five engines, provider governance, economics, status and exit gates.
+- [Full End-to-End Implementation Master Prompt](prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md) — execution instructions from fresh audit through controlled pilot.
+- [Provider Runtime Governance](docs/26-provider-runtime-governance.md) — quota enforcement and compliant account failover.
+
+The canonical master and full implementation prompt supersede fragmented task prompts for overall scope and sequencing. Detailed domain documents remain binding contracts.
