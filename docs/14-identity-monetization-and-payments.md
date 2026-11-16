@@ -1,7 +1,7 @@
 # DAYANEXA Identity, Monetization & Payment Architecture
-Version: 1.0
+Version: 2.0
 Status: Architecture decision baseline — implementation pending
-Last reviewed: 2026-11-15
+Last reviewed: 2026-11-16
 
 ## 1. Executive decisions
 
@@ -24,7 +24,7 @@ DAYANEXA adopts a hybrid, provider-agnostic architecture:
 | Identity | Sign-in, sessions, recovery, authentication events | Clerk Production |
 | Authorization | Roles, permissions, organization scope, contributor eligibility, approvals | DAYANEXA policy engine + D1 |
 | Workflow | Canonical business lifecycle, retries, checkpoints, approvals | DAYANEXA workflow core; LangGraph later |
-| AI/provider adapters | Inference, search, extraction, specialized collection | Groq, Tavily, Firecrawl, one of Apify/Scrape.ly |
+| AI/provider adapters | Inference, search, extraction, specialized collection | Cloudflare Workers AI first, Groq optional/disabled, Tavily, Firecrawl, one of Apify/Scrape.ly |
 | Persistence | Transactional state, artifacts, events, usage/cost ledger | D1 + R2; queues as needed |
 | Payments | Checkout, payment intents, provider events, refunds, payout requests | Xendit preferred; Duitku/Midtrans alternatives |
 | Financial truth | Balanced subledger, reconciliation, settlement liabilities | DAYANEXA Economic Ledger |
@@ -87,6 +87,57 @@ Do not price solely from competitor prices or model-generated estimates. Validat
 Track gross customer amount, discounts/taxes/gateway fees, net cash received, direct AI/provider costs, contributor/partner compensation, refunds/chargebacks, gross mission margin, contribution margin, settlement liability and unpaid balances.
 
 A mission must not be approved if its budget cap or minimum margin policy is violated without an authorized exception.
+
+
+
+## 4A. V2 monetization layers and customer-facing pricing
+
+The following layers define the commercial model. They are separate products and ledger flows; do not bundle them implicitly.
+
+### Layer A — SaaS access subscription
+
+| Plan | Price per 30 days | Requests | AI assists | Seats |
+|---|---:|---:|---:|---:|
+| Free | Rp0 | 2 | 0 | 1 |
+| Pro | Rp149.000 | 10 | 50 | 3 |
+| Plus | Rp399.000 | 30 | 200 | 10 |
+
+These are current working hypotheses already represented in the application plan table, not validated market prices. The subscription provides product access, quotas and stated support/priority entitlements. It does not include custom project execution, paid third-party research or contributor compensation unless an accepted quote explicitly says so.
+
+The current application describes 30-day access without automatic renewal. Preserve that posture. A renewal must be an explicit customer decision until an opt-in recurring billing flow is implemented, tested and legally reviewed.
+
+**Required correction:** the current billing implementation uses 30-day subscription periods while usage queries use calendar-month boundaries. Standardize the entitlement window and counters; show the customer the exact reset timestamp and enforce the same rule in UI and API. Enforce AI-assist quotas in the backend, not only by hiding/disabling a button.
+
+### Layer B — One-time project/service charges
+
+| Service | Indicative starting price | Unit |
+|---|---:|---|
+| Demand Validation | Rp750.000 | per project |
+| Solution Sprint | Rp3.500.000 | per sprint |
+| Build & Deliver | Rp9.500.000 | per mission |
+
+These starting prices are indicative only. A customer-specific sale requires a versioned quote with scope, assumptions, deliverables, exclusions, timeline, milestones, acceptance criteria, revisions, taxes/fees, payment schedule, expiry and cancellation/refund/dispute terms. The server calculates and snapshots the final price. The client cannot change it.
+
+### Layer C — Managed Operations
+
+Managed Operations starts indicatively at Rp4.900.000/month. It requires a separately accepted service agreement defining included outcomes, scope, cadence, SLA, reporting, responsible operator, dependencies, renewal and termination. The indicative monthly price is not authorization for an automatic recurring charge.
+
+### Layer D — Metered add-ons (future, gated)
+
+Additional request packs, AI assists, research credits, seats, storage/retention, priority handling or additional mission scope may be introduced only after a clear unit price, allowance, cap, warning threshold, tax treatment and explicit purchase confirmation exist. No silent overage, auto-top-up or paid provider spend.
+
+### Layer E — Partner/marketplace economics (future, gated)
+
+Partner commission, platform take-rate, split settlement and partner subaccounts are not part of the first commercial pilot. Enable only after gateway product eligibility, merchant KYC, provider approval, legal fund-flow review, partner agreements and reconciliation tests are documented. Do not advertise escrow or custody. The first pilot remains single-merchant collection with separately approved contributor payout.
+
+### Revenue recognition and customer disclosure
+
+- Subscription access, project revenue, managed-operations revenue, taxes, gateway fees, pass-through funds and contributor payables are distinct.
+- Gross customer checkout is not automatically DAYANEXA revenue.
+- Quote and contract snapshots must remain immutable after acceptance; changes require a new version and renewed customer acceptance.
+- Customer-visible UI must clearly separate plan fee from project/mission fee.
+- No automatic renewal, silent overage, hidden platform commission or live payment until owner approval.
+- Record willingness-to-pay, conversion, retention, cost-to-serve, refund/dispute and contribution margin to validate each pricing hypothesis.
 
 ## 5. Payment provider assessment
 
