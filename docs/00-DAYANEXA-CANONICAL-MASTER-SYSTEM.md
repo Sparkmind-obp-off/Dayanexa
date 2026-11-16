@@ -17,7 +17,7 @@ This file is the single top-level source of truth. Detailed contracts remain bin
 - `docs/24-batch-v2-code-audit.md` — dated source audit; refresh against current HEAD before implementation.
 - `docs/25-admin-resource-control-center.md` — admin control plane.
 - `docs/26-provider-runtime-governance.md` — provider account/quota/runtime/fallback rules.
-- `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.\n- `docs/28-production-build-artifact-and-pages-deployment.md` — canonical CI artifact provenance, protected Cloudflare Pages deployment, production smoke tests and rollback contract.
+- `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.\n- `docs/28-production-build-artifact-and-pages-deployment.md` — canonical manual Wrangler build, deployment, production smoke tests and rollback contract.
 - `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — execution prompt.
 
 Precedence: this master governs product intent, scope and phase order; detailed specs govern contracts; ADRs govern approved deviations. Source code is implementation evidence, not permission to silently change product intent.
@@ -155,7 +155,7 @@ Preserve the 14 existing role workspaces and the 15th owner-only Admin & Resourc
 14. Finance, Billing & Settlement.
 15. Admin & Resource Control.
 
-Admin control plane must cover system health; customer administration; contributor verification/suspension; provider and account registry; Actor registry and schema editor; quota/rate/cost/usage; reservations/reconciliation; fallback allowlist/approvals; Cloudflare D1/R2/Workers AI/Queues/Workflows health; CI and deployment commit parity; backup/restore, incidents and audit. Current shell is owner-only and partly read/verify; do not claim full administration until persistent API and policy enforcement exist. UI controls must be server-authorized and audited; secrets never display.
+Admin control plane must cover system health; customer administration; contributor verification/suspension; provider and account registry; Actor registry and schema editor; quota/rate/cost/usage; reservations/reconciliation; fallback allowlist/approvals; Cloudflare D1/R2/Workers AI/Queues/Workflows health; manual release and deployment commit parity; backup/restore, incidents and audit. Current shell is owner-only and partly read/verify; do not claim full administration until persistent API and policy enforcement exist. UI controls must be server-authorized and audited; secrets never display.
 
 ## 9. Provider and Actor governance
 
@@ -241,7 +241,7 @@ Audit classified the V3 engines as partial, not end-to-end. Gaps:
 - market presentation consent/approval, preview revocation, response capture and feedback loop;
 - expanded tenant isolation tests and real Google auth/browser proof;
 - persistent provider policy/account registry, runtime gateway, automatic quota enforcement and compliant failover;
-- full customer administration, operator/finance granular permissions, Cloudflare/CI/backup/restore monitoring.
+- full customer administration, operator/finance granular permissions, Cloudflare/deployment/backup/restore monitoring.
 
 Re-audit current HEAD; this older audit is not a statement of current source state.
 
@@ -249,7 +249,7 @@ Re-audit current HEAD; this older audit is not a statement of current source sta
 
 Classify every capability as:
 - Implemented in source (exact commit and code path).
-- CI verified (run tied to exact commit).
+- Local checks verified (commands/results tied to exact source checkout).
 - Provider/sandbox verified (actual controlled external response and usage).
 - Production verified (deployed build parity and authorized browser/API workflow).
 
@@ -291,8 +291,8 @@ Deployment approval is scoped to the frontend bundle only. It does not authorize
 
 ## 16. Definition of complete
 
-V3 is complete only when five engines work end-to-end; clusters and validated demand are persistent; solution readiness is test-proven; agents actually execute scoped tools and durable tasks; a mission creates a tested private revocable demo; market consent/feedback links to demand; all customer/contributor/operator/finance/owner journeys work; Admin Control Center is backed by secure APIs; every provider call is quota/cost governed with compliant fallback; payments and ledger reconcile; current CI passes; deployment parity, backups/restore, monitoring, legal/privacy and owner approvals are proven.
+V3 is complete only when five engines work end-to-end; clusters and validated demand are persistent; solution readiness is test-proven; agents actually execute scoped tools and durable tasks; a mission creates a tested private revocable demo; market consent/feedback links to demand; all customer/contributor/operator/finance/owner journeys work; Admin Control Center is backed by secure APIs; every provider call is quota/cost governed with compliant fallback; payments and ledger reconcile; local checks pass for the release source; deployment parity, backups/restore, monitoring, legal/privacy and owner approvals are proven.
 
 ## 17. Required batch report
 
-Report exact branch/HEAD, changed files/migrations, code reused/implemented, test commands/results, CI URL and commit, provider calls/usage/cost (never secrets), browser/production evidence, deployment status, remaining defects/owner actions and what was not tested. Explicitly state whether production D1, secrets, provider spend, external contact, live payment or deployment was touched.
+Report exact branch/HEAD, changed files/migrations, code reused/implemented, test commands/results, local command results and source commit, provider calls/usage/cost (never secrets), browser/production evidence, deployment status, remaining defects/owner actions and what was not tested. Explicitly state whether production D1, secrets, provider spend, external contact, live payment or deployment was touched.
