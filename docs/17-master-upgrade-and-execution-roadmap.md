@@ -110,3 +110,8 @@ Report:
 5. Browser/deployment evidence, if available.
 6. Remaining defects and owner actions.
 7. Explicitly state what was not tested.
+
+
+## Execution rule — no plan-only completion
+
+Use `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` as the binding phase/acceptance checklist. Each roadmap phase requires actual source implementation, integration, tests and evidence. Update docs/24 with the exact audited HEAD. If a provider credential or owner approval blocks production execution, finish safe code-side work and continue with independent phases. Do not stop after planning, documentation, a dashboard shell or CRUD.
