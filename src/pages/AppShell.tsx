@@ -46,7 +46,7 @@ export default function AppShell() {
       <div className="label">Akun saya</div>
       {nav("/app", "Beranda", Home)}{nav("/app/requests/new", "Ajukan kebutuhan", PlusCircle)}{nav("/app/requests", "Request & penawaran", Inbox)}
       {nav("/app/billing", "Paket & tagihan", CreditCard)}{nav("/app/contributor", "Kontributor", HandHelping)}{nav("/app/notifications", `Notifikasi${notes.data?.unread ? ` (${notes.data.unread})` : ""}`, Bell)}{nav("/app/support", "Dukungan", LifeBuoy)}{nav("/app/privacy", "Privasi & data", Lock)}
-      {isStaff && <><div className="label">Operasional</div>{nav("/app/queues", "Antrean operator", ListChecks)}<div className="label">Command center · 14</div>{WORKSPACES.filter((w) => can(w.perm)).map((w, i) => nav(`/app/w/${w.path}`, w.name, w.icon, String(i + 1).padStart(2, "0")))}</>}
+      {isStaff && <><div className="label">Operasional</div>{nav("/app/queues", "Antrean operator", ListChecks)}<div className="label">Command center · 15</div>{WORKSPACES.filter((w) => can(w.perm)).map((w, i) => nav(`/app/w/${w.path}`, w.name, w.icon, String(i + 1).padStart(2, "0")))}</>}
       <div className="grow" />
       <div className="card small" style={{ padding: 12, marginTop: 14 }}><div className="row between"><span className="dim">Paket</span><span className="planpill">{me?.plan.name}</span></div>
         <div className="dim" style={{ marginTop: 6 }}>Request periode ini: {me?.usage.requests}/{me?.plan.limits.requestsPerMonth}</div><div className="dim">Reset {me?.window ? new Date(me.window.resetsAt).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "medium" }) : "—"}</div></div>
