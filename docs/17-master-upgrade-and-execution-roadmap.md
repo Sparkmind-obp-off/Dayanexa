@@ -80,6 +80,10 @@ Evolve Batch V2 into a real Demand-to-Execution OS. The five engines become the 
 
 **Exit:** a real market participant can inspect a demo, provide feedback, accept a scoped offer, and (where applicable) complete verified payment and delivery. A demo view alone is not success.
 
+## Admin & Resource Control Center workstream
+
+Implement `docs/25-admin-resource-control-center.md` as a cross-cutting workstream, starting with repository hygiene and CI, then customer/contributor administration, persisted provider policies, Actor registry, cost attribution and Cloudflare operations visibility. It supports all five engines and is not optional dashboard decoration. Provider policy enforcement must precede any production Actor expansion.
+
 ## Cross-cutting gates
 
 - Free-first, explicit paid spend approval, no paid fallback or auto top-up.
