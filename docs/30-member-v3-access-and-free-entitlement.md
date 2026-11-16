@@ -78,3 +78,8 @@ The member experience may be a separate V3 product workspace; it does not have t
 - Existing customer, owner, contributor, finance and platform isolation tests remain green.
 - Browser Google sign-in, member flow and production migration/deployment parity are independently verified.
 - No account role, Clerk identity, email login setting or membership role was changed to achieve the result.
+
+
+## 8. Member Discovery Privilege — real-data access for every member
+
+The binding contract is [docs/31-member-discovery-privilege-and-real-demand-access.md](31-member-discovery-privilege-and-real-demand-access.md). Every eligible active member, including Free, receives a policy-driven opportunity to run bounded real-data discovery through approved DAYANEXA-managed sources and Actors. The launch baseline is one guaranteed real-data exploration per rolling 30 days, with one conditional additional run only when verified shared provider capacity and approved program budget permit. This is a product entitlement, not a discretionary gift or email-specific exception. Real data must have source provenance; signals are not validated demand. Public Threads, public communities/groups and public web sources are eligible only when the exact collection method is permitted. No private/restricted-group bypass, arbitrary Actor execution, provider credential exposure, unmetered use, silent paid spend or member charge. Enforce atomic entitlement/provider/program-budget reservations, run caps, reconciliation, tenant isolation and auditable failure/reset behavior. Source implementation and production activation remain pending until code, tests, provider terms and budget are verified.
