@@ -37,7 +37,7 @@ Five engines:
 
 ## Full stack
 
-React/Vite/TypeScript; Hono on Cloudflare Workers/Pages; Clerk Production; D1 additive migrations; private R2; Workers AI via native env.AI; Tavily; Firecrawl; Apify OR Scrape.ly; Groq optional disabled; Queues/Workflows when durable jobs require them; provider adapters behind one runtime gateway; audit, observability, backups, tenant isolation and CI. Avoid unnecessary paid infrastructure and microservices.
+React/Vite/TypeScript; Hono on Cloudflare Workers/Pages; Clerk Production; D1 additive migrations; private R2; Workers AI via native env.AI; Tavily; Firecrawl; Apify OR Scrape.ly; Groq optional disabled; Queues/Workflows when durable jobs require them; provider adapters behind one runtime gateway; audit, observability, backups, tenant isolation and locally executed validation scripts. Do not use GitHub Actions CI/CD; deploy manually with Cloudflare Wrangler. Avoid unnecessary paid infrastructure and microservices.
 
 ## Admin & Resource Control Center
 
@@ -50,7 +50,7 @@ Complete the 15th owner-only workspace as the actual control plane:
 - quota, rate-limit, cost, usage, reservation and reconciliation;
 - provider pause/resume, paid-use approvals and compliant fallback allowlist;
 - Cloudflare D1/R2/Workers AI/Queues/Workflows health;
-- CI run and deployed commit/build parity;
+- local release-check results and deployed commit/build parity;
 - backup/restore evidence, incidents, approvals and audit.
 
 Current shell/read views are a foundation only. Persist the data, build secure APIs and enforce every control server-side. Keep owner-only until granular RBAC is tested. Never display secrets.
@@ -97,7 +97,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 **Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, CI and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
 
-**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and current CI. The frontend Vite build must resolve the public Clerk key using docs/27. Runtime Pages vars do not modify an already-built bundle. Build and scan a production artifact from the exact approved commit, record its checksum/provenance, deploy that exact artifact to the `dayanexa` Pages project through the protected release process in docs/28, then verify the served bundle and Google auth flow. A CI pass alone is not deployment proof. No unrelated Clerk changes.
+**Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and local validation. The frontend Vite build must resolve the public Clerk key using docs/27. Runtime Pages vars do not modify an already-built bundle. Build and scan a production artifact from the exact approved commit, record its checksum/provenance, deploy the build to the `dayanexa` Pages project manually with Wrangler following docs/28, then verify the served bundle and Google auth flow. Local checks alone are not deployment proof. No unrelated Clerk changes.
 
 **Batch 2 — Customer/contributor/operator journeys:** complete flows and server-side permissions; expand cross-tenant tests across nested IDs, joins, artifacts and background jobs.
 
@@ -125,7 +125,7 @@ Use actual scripts from package.json. Deterministic mocks in ordinary CI; no ext
 
 Prove disabled, unauthorized, stale or over-budget account is blocked before network dispatch. Prove concurrent reservations cannot overspend. Prove rate-limit, ban, suspension and terms denial never rotate accounts. Prove only compliant outage fallback works. Prove admin UI is enforced by API. Provider smoke must be opt-in, capped and owner-approved.
 
-CI installs from lockfile, typechecks, tests, validates migrations, scans secrets, audits dependencies, builds and runs safe smoke. No destructive cleanup. Production D1 migration and Cloudflare deploy only after explicit owner approval; report exact commit/build parity. A Git push does not mean deployed.
+Before manual release, install from lockfile and run `npm run check`, `npm run audit`, and `npm run build`; inspect the generated bundle for the public Clerk key and scan for secrets. Then deploy with `npm run deploy` (Wrangler) only after confirming the Cloudflare account and Pages project. Run post-deploy smoke tests and record exact commit/deployment parity. No GitHub Actions workflow is used; a Git push does not mean deployed. Never combine frontend deployment with production D1 migrations or destructive cleanup.
 
 ## Definition of done
 
@@ -138,24 +138,21 @@ Every batch reports branch and exact HEAD; changed files/migrations; implemented
 Never claim success before evidence. Keep canonical master, audit, roadmap and prompt synchronized. Continue in small reviewable batches; do not stop after documentation.
 
 
-## Production artifact and Cloudflare Pages release — mandatory execution contract
+## Manual Cloudflare Pages release — mandatory execution contract
 
-Follow `docs/28-production-build-artifact-and-pages-deployment.md` as binding release procedure.
+Follow `docs/28-production-build-artifact-and-pages-deployment.md`. DAYANEXA uses manual, operator-controlled Cloudflare Wrangler deployment. Do not create or rely on GitHub Actions CI/CD workflows.
 
-The current Clerk incident status is:
-- Vite build-time public-key source fix committed.
-- GitHub Actions run `43847796716` passed for exact SHA `2cd66e2dc0a9496417df8e2eec7438b016eb0922`.
-- Production artifact deployment and Google Sign-In verification remain pending. Do not report them as complete.
+Required release sequence:
+1. Confirm the exact `main` commit SHA and inspect the intended source changes.
+2. From a clean local checkout, run `npm ci`.
+3. Run `npm run check`, `npm run audit`, and `npm run build`; stop on any failure.
+4. Inspect `dist/` and the generated frontend bundle: confirm the expected Clerk publishable key is present and no Clerk secret/JWT/webhook key or provider credential is included.
+5. Authenticate Wrangler through the operator's Cloudflare account; confirm `wrangler whoami`, account identity and Pages project `dayanexa`. Never paste credentials into chat or commit them.
+6. Deploy manually using the repository's `npm run deploy` command, which builds and runs `wrangler pages deploy dist --project-name dayanexa --branch main`.
+7. Record source SHA, commands/results, deployment ID/URL, timestamp and deployed commit/build parity.
+8. Verify production homepage, served bundle, Google Sign-In, callback, session refresh/sign-out, authenticated and unauthenticated `/api/v1/me`, role and tenant isolation.
+9. If the account, project, build output or authorization is uncertain, stop. Never switch to a different account/project or bypass Cloudflare controls.
 
-Implement a reproducible, reviewable release path:
-1. Build from a clean checkout of an exact commit using `npm ci` and the committed lockfile.
-2. Run the full CI checks and production build; inspect generated assets for Clerk public-key presence and scan for secrets.
-3. Upload the built Pages output as an immutable workflow artifact with commit SHA, workflow run ID, artifact name and checksum.
-4. Provide a separate manual production deploy workflow, gated by the protected `production` environment. Deploy only the selected artifact whose SHA matches the requested release. Use narrowly scoped Cloudflare credentials from protected GitHub Actions secrets; never invent or print credentials.
-5. Target only Pages project `dayanexa`. Do not run D1 migrations or modify Cloudflare secrets, Clerk providers, payment configuration, billing or production data.
-6. Record Cloudflare deployment ID, deployment URL, artifact checksum and commit parity.
-7. Run production domain, served-bundle, Google Sign-In, session refresh/sign-out, authenticated/unauthenticated `/api/v1/me`, role and tenant-isolation smoke tests.
-8. If required secrets, artifact provenance, environment approval or project identity is unavailable, stop and report the exact blocker. Do not bypass the gate or fall back to an unverified build.
-9. Keep the last known-good frontend deployment available for controlled rollback. Never couple frontend rollback to destructive D1 rollback.
+Do not run `npm run db:migrate:prod` or any production D1 migration as part of frontend deployment. The approval to deploy the frontend does not authorize D1 changes, Clerk dashboard/provider changes, secret creation/rotation, payment changes, billing changes, provider spend or data deletion. Keep the last known-good Pages deployment available for frontend rollback only; do not couple rollback to D1 data changes.
 
-Do not claim production fixed until all production verification criteria pass. A 200 homepage response alone is insufficient. Deployment approval is scoped to publishing the frontend bundle and does not authorize migrations, secret changes, Clerk dashboard changes, payment changes, provider spend or data deletion.
+Local validation is not proof of deployment. Wrangler reporting a successful upload is not proof that authentication works. Keep status **PRODUCTION DEPLOYMENT PENDING** until all production verification criteria pass.
