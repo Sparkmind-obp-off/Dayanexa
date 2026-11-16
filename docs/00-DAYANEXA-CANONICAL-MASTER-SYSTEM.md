@@ -52,6 +52,10 @@ Discover demand first regardless of current capability. Then choose to reuse, co
 11. Unknown authorization, quota, pricing, provenance or safety fails closed.
 12. Never evade provider limits by rotating accounts.
 
+## 2A. Explicit scope boundary — identity is not the implementation target
+
+The current implementation objective is the complete DAYANEXA V3 Demand-to-Execution system. Do not interpret this objective as a request to change the user's account, platform role, membership, bootstrap identity, or the visual display of a `member` label. Do not promote, demote, rewrite, or otherwise mutate account/role data as a shortcut or proxy for V3 completion. Identity and authorization remain security foundations and must be audited only where required for correct access control, tenant isolation, and least privilege. The user's concern in this workstream is that the V3 product concepts become real, integrated, tested capabilities—not a role-label change.
+
 ## 3. Five engines
 
 ### 3.1 Demand Discovery Engine
