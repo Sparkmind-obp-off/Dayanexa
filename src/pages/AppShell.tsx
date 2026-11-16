@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { UserButton } from "@clerk/react";
-import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox, LifeBuoy, Lock, ListChecks } from "lucide-react";
+import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox, LifeBuoy, Lock, ListChecks, SlidersHorizontal } from "lucide-react";
 import { Brand } from "./Public";
 import { useSession } from "../lib/session";
 import { useGet } from "../lib/api";
@@ -26,6 +26,7 @@ export const WORKSPACES = [
   { path: "ledger", name: "Economic Ledger", icon: Wallet, el: W.Ledger, perm: "ledger:read" },
   { path: "learning", name: "Intelligence & Learning", icon: ChartNoAxesCombined, el: W.Learning, perm: "workspace:read" },
   { path: "governance", name: "Governance & Audit", icon: ShieldCheck, el: W.Governance, perm: "governance:read" },
+  { path: "admin-control", name: "Admin & Resource Control", icon: SlidersHorizontal, el: W.AdminControl, perm: "provider:admin" },
 ];
 
 export default function AppShell() {
