@@ -54,6 +54,9 @@ Discover demand first regardless of current capability. Then choose to reuse, co
 
 ## 2A. Account identity, platform roles and V3 product entitlement are separate
 
+The binding implementation contract for member V3 access is [docs/30-member-v3-access-and-free-entitlement.md](30-member-v3-access-and-free-entitlement.md). Follow its access matrix, Free-plan cost rules and acceptance criteria.
+
+
 The platform owner identity `sparkmind.support@gmail.com` remains the owner/platform administrator. A normal account such as `elmatador0197@gmail.com` may remain `member` and must still be able to use the complete DAYANEXA V3 product through an explicit Free-plan product entitlement. **Do not promote a member to owner/operator/analyst or grant platform administration as a workaround.** The implementation target includes making V3 usable by member accounts; it is not satisfied by hiding the V3 product behind staff-only role permissions.
 
 Three separate layers must be enforced:
