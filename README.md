@@ -39,6 +39,13 @@ Batch V2 source audit: `main @ 04b4bbe4dd37fd2b4710bcab55e90cc42a0db6fa` (16 Nov
 
 After migration 0008 is applied, providers stay blocked until the owner, per provider: (1) sets the policy (enabled, unit type matching the meter — `neurons`/`tokens`/`credits`/`usd_micros` — and daily/monthly caps > 0); (2) registers an authorized account with capabilities (e.g. `search`, `scrape`, `inference:classification`, `actor:user~actor`), terms review date, unit price (0 = free; empty = unknown → blocked) and per-request/daily/monthly caps; (3) records a verified quota snapshot (dashboard/provider API/official page) with timestamp; (4) for Actors, approves the registry entry with an expiry. Paid use requires a scoped approval with spend cap and expiry.
 
+## Omni-Channel Demand Discovery (member V3)
+
+- Member workspace: `/app/discovery` — brief, category, single / multi / omni mode, searchable source catalog, source hints, scope review, live campaign status, channel coverage, provenance-backed evidence, usage and entitlement, retry / cancel / expand, handoff to opportunity assessment.
+- Member API (tenant-scoped, `v3:use`): `GET /api/v1/discovery/{meta,entitlement,catalog,campaigns}`, `POST /discovery/sources/hints`, `POST /discovery/campaigns` (idempotency-key), `GET /discovery/campaigns/:id[/evidence]`, `POST /discovery/campaigns/:id/{start,resume,cancel,retry,expand,handoff}`.
+- Owner API (`provider:admin`): `/api/v1/admin/discovery/{sources,budgets,policies,campaigns}`, `POST /admin/discovery/sources/:id/review`.
+- Free policy v1: 1 guaranteed + 1 conditional campaign per rolling 30 days; a multi/omni campaign counts once. Status and activation steps: [docs/24 §F](docs/24-batch-v2-code-audit.md).
+
 ## Development
 
 Node.js >=20.9.0.

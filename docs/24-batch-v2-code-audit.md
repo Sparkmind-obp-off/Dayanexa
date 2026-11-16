@@ -239,3 +239,25 @@ A new binding contract, `docs/31-member-discovery-privilege-and-real-demand-acce
 The contract requires reviewed public source/Actor allowlists (including public Threads/community/group sources only where the exact collection method is permitted), real source provenance, strict per-member/tenant/Actor/provider/program-budget caps, atomic reservations, idempotency, usage/cost reconciliation, tenant isolation, audit and fail-closed handling. It prohibits private/restricted-group bypass, arbitrary Actor IDs, credential exposure, account rotation, silent paid use and member charges. Signals must not be represented as validated demand.
 
 **Audit status:** documentation and canonical prompt binding are complete at commit `05971e19ce8b54673700b000f417efc812a238c5`. No source implementation, migration, provider call, budget allocation, test, production activation or deployment was performed in this documentation batch. Existing member V3 source-access gap remains open. Next source batch must audit current discovery/provider/Actor/plan paths, implement policy and atomic entitlement reservations, build member Discovery UI/API, add tests and separately verify any real provider run under explicit bounded approval.
+
+## F. Omni-Channel Demand Discovery — implementation status (16 Nov 2026)
+
+Contract: [docs/31](31-member-discovery-privilege-and-real-demand-access.md). Status values are kept separate.
+
+| Area | Status | Evidence |
+|---|---|---|
+| Migration 0009 (policies, catalog, reviews, budgets, campaigns, jobs, entitlements, envelopes, evidence provenance) | Implemented + tested locally | `apps/api/migrations/0009_omni_channel_discovery.sql`, `npm run check:migrations` |
+| Versioned Free policy: 1 guaranteed + 1 conditional campaign / rolling 30 days, no email logic | Implemented + tested | `discovery/entitlements.ts`, `tests/discovery.test.ts` |
+| Campaign entitlement not multiplied by child jobs; same-campaign retry reuses entitlement; pre-dispatch rejection releases it | Implemented + tested | idem. |
+| Lifecycle DRAFT→…→COMPLETED/PARTIAL/FAILED/CANCELLED, idempotency, atomic reservations, leased jobs, bounded retry, cancel, reconciliation | Implemented + tested | `discovery/engine.ts` |
+| Single / multi / omni scope planning with explained unavailable sources | Implemented + tested | idem. |
+| Source catalog (11 curated entries, all `pending_review`), search/filters, member URL/community hints (org-private, never auto-approved), append-only permission review | Implemented + tested | `discovery/catalog.ts`, `routes/discovery.ts` |
+| Every provider call via `governedCall` (static scan test still green); fail closed on stale quota / unknown price / paid route / disabled provider | Implemented + tested | `tests/gateway.test.ts`, `tests/discovery.test.ts` |
+| Evidence normalization: canonical URL, fingerprint, syndication detection, independent-source key, heuristic cues labelled *inferred* | Implemented + tested | `discovery/evidence.ts` |
+| Member V3 workspace `/app/discovery` (`v3:use`, no staff permission) + owner tab "Discovery member" | Implemented, typechecked, built | `src/pages/Discovery.tsx` |
+| Opportunity-assessment handoff (demand hypothesis + linked evidence; normal request quota) | Implemented + tested | `routes/discovery.ts` |
+| Tests | 110/110 passing locally (25 new) | `npm run ci` |
+| Real provider data in production | **Not activated.** Requires owner: approve sources, verified quota snapshot, program budget. | — |
+| Browser Google sign-in journey for a member | **Not verified** in this change. | — |
+
+Owner activation sequence (production): apply migration 0009 → in Admin & Resource Control › Runtime gateway confirm Tavily policy/account/fresh quota snapshot → in › Discovery member review each source (exact method, public access, commercial use, expiry ≤180 days) → approve a program budget (free allowance, per-org cap, expiry ≤93 days). Until then members see their entitlement as *pending capacity*, never as fulfilled.
