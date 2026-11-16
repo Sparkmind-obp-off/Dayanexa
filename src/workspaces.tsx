@@ -366,6 +366,14 @@ export function AdminControl() {
   const policies = useGet<any>("/admin/provider-policies");
   const accounts = useGet<any>("/admin/provider-accounts");
   const actorRegistry = useGet<any>("/admin/actors");
+  const gw = useGet<any>("/admin/gateway/status", { enabled: tab === "Runtime gateway" });
+  const snapshots = useGet<any>("/admin/quota-snapshots", { enabled: tab === "Runtime gateway" });
+  const approvals = useGet<any>("/admin/provider-approvals", { enabled: tab === "Runtime gateway" });
+  const fallbacks = useGet<any>("/admin/fallback-rules", { enabled: tab === "Runtime gateway" });
+  const reservations = useGet<any>("/admin/usage-reservations", { enabled: tab === "Runtime gateway" });
+  const breakers = useGet<any>("/admin/circuit-breakers", { enabled: tab === "Runtime gateway" });
+  const refetchGw = () => Promise.all([gw.refetch(), snapshots.refetch(), approvals.refetch(), fallbacks.refetch(), reservations.refetch(), breakers.refetch()]);
+  const accountOptions = (accounts.data?.items ?? []).map((a: any) => ({ value: a.id, label: `${a.provider_id} · ${a.label}` }));
   const ai = useGet<any>("/ai/status");
   const health = usePublic<any>("/health");
   const contributors = (users.data?.items ?? []).filter((u: any) => u.contributor);
@@ -375,8 +383,8 @@ export function AdminControl() {
   const usageItems = providers.data?.usage ?? [];
   const actorItems = benchmarks.data?.items ?? [];
   return <div className="stack">
-    <div className="alert warn small">Pusat kontrol administratif. Data dan tindakan dibatasi oleh izin owner. Perubahan provider, budget, Actor, dan infrastruktur belum dapat dilakukan dari dashboard sampai policy API persisten selesai dibangun.</div>
-    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Akun provider", "Actor", "Actor registry", "Cloudflare & CI"]} value={tab} onChange={setTab} />
+    <div className="alert warn small">Pusat kontrol administratif. Data dan tindakan dibatasi oleh izin owner. Setiap panggilan provider (Workers AI, Groq, Tavily, Firecrawl, Apify, Scrape.ly) melewati Provider Runtime Gateway server-side: policy, akun terotorisasi, kuota terverifikasi, cap, reservasi atomik, rekonsiliasi dan circuit breaker. Default: semua diblokir sampai dikonfigurasi.</div>
+    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Akun provider", "Runtime gateway", "Actor", "Actor registry", "Cloudflare & CI"]} value={tab} onChange={setTab} />
     {tab === "Ringkasan" && <div className="stack">
       <div className="grid g4">
         <Stat label="Organisasi pelanggan" value={customerItems.length} note="Organisasi tercatat di D1" />
@@ -415,9 +423,9 @@ export function AdminControl() {
         {name:"monthlyCostUsdMicros",label:"Cap biaya bulanan USD micros",type:"number",defaultValue:0},
         {name:"perRunCostUsdMicros",label:"Cap biaya per run USD micros",type:"number",defaultValue:0},
         {name:"unitType",label:"Satuan",defaultValue:"requests"},
-        {name:"fallbackMode",label:"Mode saat kuota habis",type:"select",options:[{value:"stop",label:"Berhenti / defer (default)"},{value:"approved_account_pool",label:"Pool akun yang diotorisasi (belum diaktifkan di runtime)"}]}
+        {name:"fallbackMode",label:"Mode saat provider gangguan",type:"select",options:[{value:"stop",label:"Berhenti / defer (default)"},{value:"approved_account_pool",label:"Fallback outage-only lewat aturan yang disetujui"}]}
       ]} submit={(v)=>{const {providerId,...policy}=v;return patch(api,`/admin/provider-policies/${providerId}`,policy).then(()=>policies.refetch());}} />
-      <Section title="Kebijakan persisten" sub="Tersimpan di D1 dan diaudit. Hard enforcement pada jalur pemanggilan provider masih tahap berikutnya; jangan anggap perubahan cap sudah menghentikan seluruh request sampai runtime enforcement selesai.">
+      <Section title="Kebijakan persisten" sub="Tersimpan di D1, diaudit, dan ditegakkan oleh Provider Runtime Gateway sebelum setiap panggilan. Satuan policy harus sama dengan satuan meter provider (neurons/tokens/credits/usd_micros).">
         <Q q={policies}>{d=><Table rows={d.items} empty="Belum ada kebijakan eksplisit; runtime masih memakai konfigurasi environment saat ini" cols={[
           {h:"Provider",r:(x:any)=><b>{x.provider_id}</b>},{h:"Aktif",r:(x:any)=><Badge v={x.enabled?"active":"paused"}/>},
           {h:"Paid",r:(x:any)=><Badge v={x.allow_paid_usage?"warning":"disabled"}/>},
@@ -449,9 +457,9 @@ export function AdminControl() {
     {tab === "Akun provider" && <div className="stack">
       <div className="alert warn small">Profil akun hanya menyimpan nama binding secret, bukan token. Token wajib ditambahkan melalui Cloudflare Worker/Pages Secrets. Rotasi akun hanya untuk akun yang sah dan sesuai ketentuan provider; bukan untuk menghindari limit atau kuota gratis.</div>
       <NewPanel title="+ Daftarkan akun provider yang diotorisasi" fields={[
-        {name:"providerId",label:"Provider",type:"select",options:[{value:"apify",label:"Apify"},{value:"scrapely",label:"Scrape.ly"},{value:"tavily",label:"Tavily"},{value:"firecrawl",label:"Firecrawl"},{value:"groq",label:"Groq"}]},
+        {name:"providerId",label:"Provider",type:"select",options:[{value:"workers-ai",label:"Workers AI"},{value:"apify",label:"Apify"},{value:"scrapely",label:"Scrape.ly"},{value:"tavily",label:"Tavily"},{value:"firecrawl",label:"Firecrawl"},{value:"groq",label:"Groq"}]},
         {name:"label",label:"Nama akun/workspace",required:true},
-        {name:"secretBinding",label:"Nama binding secret",type:"select",options:["APIFY_API_TOKEN","APIFY_API_TOKEN_2","APIFY_API_TOKEN_3","SCRAPELY_API_KEY","SCRAPELY_API_KEY_2","SCRAPELY_API_KEY_3","TAVILY_API_KEY","TAVILY_API_KEY_2","FIRECRAWL_API_KEY","FIRECRAWL_API_KEY_2","GROQ_API_KEY","GROQ_API_KEY_2"].map(x=>({value:x,label:x}))},
+        {name:"secretBinding",label:"Nama binding secret",type:"select",options:["AI","TAVILY_API_KEY_3","FIRECRAWL_API_KEY_3","GROQ_API_KEY_3","APIFY_API_TOKEN","APIFY_API_TOKEN_2","APIFY_API_TOKEN_3","SCRAPELY_API_KEY","SCRAPELY_API_KEY_2","SCRAPELY_API_KEY_3","TAVILY_API_KEY","TAVILY_API_KEY_2","FIRECRAWL_API_KEY","FIRECRAWL_API_KEY_2","GROQ_API_KEY","GROQ_API_KEY_2"].map(x=>({value:x,label:x}))},
         {name:"ownershipStatus",label:"Otorisasi",type:"select",options:[{value:"pending",label:"Menunggu verifikasi"},{value:"authorized",label:"Diotorisasi"},{value:"revoked",label:"Dicabut"}]},
         {name:"accountStatus",label:"Status",type:"select",options:[{value:"paused",label:"Jeda"},{value:"active",label:"Aktif"},{value:"exhausted",label:"Kuota habis"},{value:"disabled",label:"Nonaktif"}]},
         {name:"planName",label:"Paket provider",defaultValue:"free"},
@@ -461,17 +469,80 @@ export function AdminControl() {
         {name:"dailyCostUsdMicros",label:"Batas biaya harian (USD micros)",type:"number",defaultValue:0},
         {name:"monthlyCostUsdMicros",label:"Batas biaya bulanan (USD micros)",type:"number",defaultValue:0},
         {name:"termsReviewedAt",label:"Tanggal review terms (ISO)",placeholder:"2026-11-16T00:00:00Z"},
+        {name:"capabilities",label:"Kapabilitas (pisah koma)",placeholder:"search | scrape | inference:classification | actor:user~actor"},
+        {name:"unitType",label:"Satuan meter",type:"select",options:["credits","neurons","tokens","usd_micros","requests"].map(x=>({value:x,label:x}))},
+        {name:"perRequestUnitCap",label:"Cap unit per request",type:"number",defaultValue:0},
+        {name:"unitPriceUsdMicros",label:"Harga per unit (USD micros; 0 = gratis; kosong = tidak diketahui → diblokir)"},
+        {name:"concurrencyLimit",label:"Concurrency",type:"number",defaultValue:1},
+        {name:"priority",label:"Prioritas (kecil = utama)",type:"number",defaultValue:100},
+        {name:"multiAccountTermsOk",label:"Terms provider mengizinkan multi-akun untuk tujuan ini (sudah diverifikasi)",type:"checkbox",defaultValue:false},
         {name:"notes",label:"Catatan",type:"textarea"}
-      ]} submit={(v)=>post(api,"/admin/provider-accounts",v).then(()=>accounts.refetch())} />
+      ]} submit={(v)=>post(api,"/admin/provider-accounts",{...v,capabilities:String(v.capabilities??"").split(",").map((x:string)=>x.trim()).filter(Boolean),unitPriceUsdMicros:v.unitPriceUsdMicros===null||v.unitPriceUsdMicros===""?null:Number(v.unitPriceUsdMicros)}).then(()=>accounts.refetch())} />
       <Section title="Akun provider terdaftar" sub="Metadata akun dan kapasitas yang dicatat owner. Ketersediaan token belum diverifikasi otomatis.">
         <Q q={accounts}>{d=><Table rows={d.items} empty="Belum ada akun provider" cols={[
           {h:"Provider / akun",r:(x:any)=><div><b>{x.provider_id} · {x.label}</b><div className="small dim">{x.secret_binding}</div></div>},
           {h:"Otorisasi",r:(x:any)=><Badge v={x.ownership_status}/>},{h:"Status",r:(x:any)=><Badge v={x.account_status}/>},
           {h:"Paket",r:(x:any)=>x.plan_name},{h:"Tagihan",r:(x:any)=>x.billing_mode},
-          {h:"Cap unit H/B",r:(x:any)=>`${x.daily_unit_cap}/${x.monthly_unit_cap}`},
-          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"active"}).then(()=>accounts.refetch())}>Aktifkan</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"paused"}).then(()=>accounts.refetch())}>Jeda</ActionButton></div>}
+          {h:"Cap unit req/H/B",r:(x:any)=>`${x.per_request_unit_cap}/${x.daily_unit_cap}/${x.monthly_unit_cap} ${x.unit_type}`},
+          {h:"Kapabilitas",r:(x:any)=><span className="small mono">{x.capabilities_json}</span>},
+          {h:"Harga/unit",r:(x:any)=>x.unit_price_usd_micros===null?<Badge v="pending"/>:usd(x.unit_price_usd_micros)},
+          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"active"}).then(()=>accounts.refetch())}>Aktifkan</ActionButton><ActionButton cls="btn danger sm" confirm="Nonaktifkan akun ini secara permanen dari seleksi?" run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"disabled"}).then(()=>accounts.refetch())}>Nonaktifkan</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/provider-accounts/${x.id}`,{accountStatus:"paused"}).then(()=>accounts.refetch())}>Jeda</ActionButton></div>}
         ]}/>}</Q>
       </Section>
+    </div>}
+    {tab === "Runtime gateway" && <div className="stack">
+      <div className="alert warn small">Gateway gagal-tertutup: tanpa policy aktif, akun terotorisasi dengan kapabilitas, review terms, harga diketahui, cap &gt; 0 dan snapshot kuota terverifikasi yang segar, panggilan diblokir sebelum keluar ke jaringan. 429, ban/suspensi, kuota habis dan terms tidak pernah memicu rotasi akun. Fallback hanya untuk gangguan (outage) melalui aturan yang disetujui dan belum kedaluwarsa.</div>
+      <Section title="Kelayakan akun (evaluasi 1 unit, tanpa reservasi)">
+        <Q q={gw}>{d=><Table rows={d.items} empty="Belum ada akun provider" cols={[
+          {h:"Akun",r:(x:any)=><div><b>{x.providerId} · {x.label}</b><div className="small mono">{x.capability} · {x.unitType}</div></div>},
+          {h:"Layak",r:(x:any)=><Badge v={x.eligible?"success":"failure"}/>},
+          {h:"Alasan",r:(x:any)=><span className="small">{x.code ? `${x.code}: ${x.reason}` : "—"}</span>},
+          {h:"Sisa kuota",r:(x:any)=>x.quotaRemaining ?? "—"},
+          {h:"Snapshot",r:(x:any)=><span className="small">{x.snapshotSource ?? "—"} {x.snapshotVerifiedAt ? dt(x.snapshotVerifiedAt) : ""}</span>},
+          {h:"Pakai hari ini / berjalan",r:(x:any)=>`${x.usage.accountDayUnits} / ${x.usage.inFlight}`},
+          {h:"Credential",r:(x:any)=><Badge v={x.credentialPresent?"success":"pending"}/>},
+        ]}/>}</Q>
+      </Section>
+      <NewPanel title="+ Catat snapshot kuota terverifikasi" fields={[
+        {name:"accountId",label:"Akun",type:"select",options:accountOptions},
+        {name:"unitType",label:"Satuan",type:"select",options:["credits","neurons","tokens","usd_micros","requests"].map(x=>({value:x,label:x}))},
+        {name:"allowanceUnits",label:"Allowance",type:"number",required:true},
+        {name:"usedUnitsReported",label:"Terpakai menurut provider",type:"number",defaultValue:0},
+        {name:"windowKind",label:"Jendela",type:"select",options:[{value:"month",label:"Bulanan"},{value:"day",label:"Harian"},{value:"fixed",label:"Tetap"}]},
+        {name:"resetAt",label:"Reset berikutnya (ISO)"},{name:"resetTimezone",label:"Zona waktu reset",defaultValue:"UTC"},
+        {name:"source",label:"Sumber",type:"select",options:[{value:"account_dashboard",label:"Dashboard akun"},{value:"provider_api",label:"API provider"},{value:"official_published",label:"Halaman resmi"}]},
+        {name:"sourceNote",label:"Bukti/catatan sumber",required:true},
+        {name:"verifiedAt",label:"Diverifikasi pada (ISO)",defaultValue:new Date().toISOString()},
+      ]} submit={(v)=>post(api,"/admin/quota-snapshots",v).then(refetchGw)} />
+      <Section title="Snapshot kuota"><Q q={snapshots}>{d=><Table rows={d.items} empty="Belum ada snapshot — semua akun diblokir (QUOTA_UNKNOWN)" cols={[
+        {h:"Akun",r:(x:any)=>`${x.provider_id} · ${x.label}`},{h:"Allowance",r:(x:any)=>`${x.allowance_units} ${x.unit_type} (${x.window_kind})`},
+        {h:"Terpakai",r:(x:any)=>x.used_units_reported},{h:"Sumber",r:(x:any)=><span className="small">{x.source}: {x.source_note}</span>},{h:"Verifikasi",r:(x:any)=>dt(x.verified_at)}]}/>}</Q></Section>
+      <NewPanel title="+ Persetujuan penggunaan berbayar (scoped, ber-cap, ber-expiry)" fields={[
+        {name:"accountId",label:"Akun",type:"select",options:accountOptions},{name:"capability",label:"Kapabilitas",required:true},
+        {name:"maxSpendUsdMicros",label:"Maks belanja (USD micros)",type:"number",required:true},
+        {name:"expiresAt",label:"Kedaluwarsa (ISO, maks 90 hari)",required:true},{name:"reason",label:"Alasan",type:"textarea",required:true},
+      ]} submit={(v)=>post(api,"/admin/provider-approvals",v).then(refetchGw)} />
+      <Section title="Persetujuan berbayar"><Q q={approvals}>{d=><Table rows={d.items} empty="Tidak ada — penggunaan berbayar diblokir" cols={[
+        {h:"Akun/kapabilitas",r:(x:any)=><span className="small mono">{x.account_id} · {x.capability}</span>},{h:"Cap",r:(x:any)=>usd(x.max_spend_usd_micros)},
+        {h:"Berlaku",r:(x:any)=>`${dt(x.starts_at)} → ${dt(x.expires_at)}`},{h:"Status",r:(x:any)=><Badge v={x.status}/>},
+        {h:"",r:(x:any)=>x.status==="active"&&<ActionButton cls="btn danger sm" run={()=>post(api,`/admin/provider-approvals/${x.id}/revoke`,{reason:"Dicabut oleh owner"}).then(refetchGw)}>Cabut</ActionButton>}]}/>}</Q></Section>
+      <NewPanel title="+ Aturan fallback outage-only" fields={[
+        {name:"capability",label:"Kapabilitas",required:true},
+        {name:"primaryAccountId",label:"Akun utama",type:"select",options:accountOptions},{name:"fallbackAccountId",label:"Akun fallback (provider sama, terotorisasi)",type:"select",options:accountOptions},
+        {name:"expiresAt",label:"Kedaluwarsa (ISO, maks 90 hari)",required:true},{name:"reason",label:"Alasan & bukti terms multi-akun",type:"textarea",required:true},
+      ]} submit={(v)=>post(api,"/admin/fallback-rules",v).then(refetchGw)} />
+      <Section title="Aturan fallback"><Q q={fallbacks}>{d=><Table rows={d.items} empty="Tidak ada — gangguan provider berarti berhenti/defer" cols={[
+        {h:"Kapabilitas",r:(x:any)=>x.capability},{h:"Utama → fallback",r:(x:any)=><span className="small mono">{x.primary_account_id} → {x.fallback_account_id}</span>},
+        {h:"Pemicu",r:(x:any)=>x.trigger_kind},{h:"Kedaluwarsa",r:(x:any)=>dt(x.expires_at)},{h:"Status",r:(x:any)=><Badge v={x.status}/>},
+        {h:"",r:(x:any)=>x.status==="active"&&<ActionButton cls="btn danger sm" run={()=>post(api,`/admin/fallback-rules/${x.id}/revoke`,{reason:"Dicabut oleh owner"}).then(refetchGw)}>Cabut</ActionButton>}]}/>}</Q></Section>
+      <Section title="Reservasi & rekonsiliasi" sub="unknown_charge = timeout/ambigu: kapasitas tetap ditahan sampai owner memeriksa dashboard provider."><Q q={reservations}>{d=><Table rows={d.items} empty="Belum ada panggilan" cols={[
+        {h:"Waktu",r:(x:any)=>dt(x.created_at)},{h:"Akun",r:(x:any)=>`${x.provider_id} · ${x.account_label ?? x.account_id}`},{h:"Kapabilitas",r:(x:any)=><span className="small mono">{x.capability}</span>},
+        {h:"Reservasi → aktual",r:(x:any)=>`${x.units_reserved} → ${x.units_actual ?? "—"} ${x.unit_type}`},{h:"Biaya",r:(x:any)=>usd(x.cost_actual_usd_micros ?? x.cost_reserved_usd_micros)},
+        {h:"Status",r:(x:any)=><span><Badge v={x.status}/>{x.exception && <span className="small"> {x.exception}</span>}{x.fallback_of && <span className="small"> (fallback)</span>}</span>},
+        {h:"",r:(x:any)=>x.status==="unknown_charge"&&<ActionButton run={()=>{const u=window.prompt("Unit aktual menurut dashboard provider (0 jika tidak ditagih):","0"); return u===null?Promise.resolve():post(api,`/admin/usage-reservations/${x.id}/resolve`,{outcome:Number(u)>0?"settled":"released",unitsActual:Number(u)||0,note:"Rekonsiliasi manual dari dashboard provider"}).then(refetchGw);}}>Rekonsiliasi</ActionButton>}]}/>}</Q></Section>
+      <Section title="Circuit breaker"><Q q={breakers}>{d=><Table rows={d.items} empty="Semua tertutup" cols={[
+        {h:"Akun",r:(x:any)=>`${x.provider_id} · ${x.label}`},{h:"Kelas",r:(x:any)=><Badge v={x.error_class ?? "unknown"}/>},{h:"Terbuka sampai",r:(x:any)=>x.open_until?dt(x.open_until):"—"},
+        {h:"Kode",r:(x:any)=>x.last_error_code},{h:"",r:(x:any)=><ActionButton confirm="Reset breaker? Pastikan penyebab sudah ditangani." run={()=>post(api,`/admin/circuit-breakers/${x.account_id}/reset`,{reason:"Direset owner setelah verifikasi"}).then(refetchGw)}>Reset</ActionButton>}]}/>}</Q></Section>
     </div>}
     {tab === "Actor registry" && <div className="stack">
       <div className="alert warn small">Actor baru berstatus draft. Hanya Actor yang telah ditinjau terms, privasi, input schema, harga dan batas run yang boleh disetujui. Persetujuan registry belum otomatis mengaktifkan jalur eksekusi produksi.</div>
@@ -498,7 +569,7 @@ export function AdminControl() {
           {h:"Actor",r:(x:any)=><div><b>{x.display_name}</b><div className="small mono">{x.provider_id}/{x.actor_id}</div></div>},
           {h:"Sumber",r:(x:any)=>x.source_platform},{h:"Status",r:(x:any)=><Badge v={x.status}/>},
           {h:"Batas run",r:(x:any)=>x.max_items},{h:"Biaya/run",r:(x:any)=>usd(x.per_run_cost_usd_micros)},
-          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/actors/${x.id}`,{status:"review"}).then(()=>actorRegistry.refetch())}>Review</ActionButton><ActionButton run={()=>patch(api,`/admin/actors/${x.id}`,{status:"approved"}).then(()=>actorRegistry.refetch())}>Setujui</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/actors/${x.id}`,{status:"paused"}).then(()=>actorRegistry.refetch())}>Jeda</ActionButton></div>}
+          {h:"Tindakan",r:(x:any)=><div className="row"><ActionButton run={()=>patch(api,`/admin/actors/${x.id}`,{status:"review"}).then(()=>actorRegistry.refetch())}>Review</ActionButton><ActionButton run={()=>{const exp=window.prompt("Persetujuan berlaku sampai (ISO, maks 180 hari):", new Date(Date.now()+30*86400000).toISOString()); return exp?patch(api,`/admin/actors/${x.id}`,{status:"approved",approvalExpiresAt:exp}).then(()=>actorRegistry.refetch()):Promise.resolve();}}>Setujui</ActionButton><ActionButton cls="btn danger sm" run={()=>patch(api,`/admin/actors/${x.id}`,{status:"paused"}).then(()=>actorRegistry.refetch())}>Jeda</ActionButton></div>}
         ]}/>}</Q>
       </Section>
     </div>}

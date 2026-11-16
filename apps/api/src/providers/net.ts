@@ -35,10 +35,13 @@ export async function fetchJson(url: string, init: RequestInit & { timeoutMs?: n
   } finally { clearTimeout(timer); }
 }
 
-export function mapStatus(status: number, provider: string): never {
+export function mapStatus(status: number, provider: string, headers?: Headers): never {
   if (status === 401 || status === 403) throw new ProviderError("NOT_CONFIGURED", `${provider} rejected the credential (HTTP ${status})`, 502);
   if (status === 402) throw new ProviderError("QUOTA_EXHAUSTED", `${provider} quota/credits exhausted (HTTP 402). No paid fallback.`, 503);
-  if (status === 429) throw new ProviderError("RATE_LIMITED", `${provider} rate limited`, 429);
+  if (status === 429) {
+    const ra = Number(headers?.get("retry-after"));
+    throw new ProviderError("RATE_LIMITED", `${provider} rate limited`, 429, Number.isFinite(ra) && ra > 0 ? ra : 60);
+  }
   if (status >= 400 && status < 500) throw new ProviderError("INVALID_REQUEST", `${provider} rejected the request (HTTP ${status})`, 400);
   throw new ProviderError("UPSTREAM_ERROR", `${provider} upstream error (HTTP ${status})`, 502);
 }

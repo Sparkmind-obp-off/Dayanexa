@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Date:** 16 November 2026  
 **Authority:** DAYANEXA V3 Master System and Admin & Resource Control Center  
-**Status:** Canonical design requirement; runtime enforcement is not yet claimed as implemented.
+**Status:** Canonical design requirement. Runtime enforcement implemented in source (`apps/api/src/providers/gateway.ts`, migration 0008, `tests/gateway.test.ts`) — see docs/24 §B. Not production-verified until migration 0008 is applied and deployment parity is proven.
 
 ## 1. Purpose
 

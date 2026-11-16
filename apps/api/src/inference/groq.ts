@@ -1,5 +1,6 @@
 import type { InferenceProvider, InferenceRequest, InferenceResult } from "./types";
 import { InferenceError } from "./types";
+import { assertTicket, type DispatchTicket } from "../providers/gateway";
 
 /**
  * Optional GroqCloud adapter. DISABLED by default: requires GROQ_ENABLED=true AND a Worker secret
@@ -14,17 +15,19 @@ export class GroqProvider implements InferenceProvider {
   id = "groq" as const;
   constructor(private enabled: boolean, private apiKey: string | undefined) {}
   isAvailable() { return this.enabled && Boolean(this.apiKey); }
-  async run(req: InferenceRequest): Promise<InferenceResult> {
+  async run(req: InferenceRequest, ticket?: DispatchTicket): Promise<InferenceResult> {
+    const apiKey = assertTicket(ticket, "groq").credential;
     if (!this.enabled) throw new InferenceError("PROVIDER_DISABLED", "GroqCloud is disabled by policy.");
-    if (!this.apiKey) throw new InferenceError("PROVIDER_NOT_CONFIGURED");
+    if (!apiKey) throw new InferenceError("PROVIDER_NOT_CONFIGURED");
     const model = GROQ_MODEL_MAP[req.modelId];
     if (!model) throw new InferenceError("MODEL_UNAVAILABLE", "No approved Groq mapping for this profile.");
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST", signal: req.signal,
-      headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
+      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ model, messages: req.messages, max_tokens: req.maxOutputTokens, temperature: req.temperature, ...(req.jsonMode ? { response_format: { type: "json_object" } } : {}) }),
     });
-    if (res.status === 429) throw new InferenceError("RATE_LIMITED", "Groq rate limit", true);
+    if (res.status === 429) { const e = new InferenceError("RATE_LIMITED", "Groq rate limit", true) as InferenceError & { retryAfterSeconds?: number }; const ra = Number(res.headers.get("retry-after")); e.retryAfterSeconds = Number.isFinite(ra) && ra > 0 ? ra : 60; throw e; }
+    if (res.status === 401 || res.status === 403) throw new InferenceError("PROVIDER_NOT_CONFIGURED", `Groq rejected the credential (HTTP ${res.status})`);
     if (!res.ok) throw new InferenceError(res.status >= 500 ? "PROVIDER_ERROR" : "INVALID_INPUT", `Groq HTTP ${res.status}`, res.status >= 500);
     const out = await res.json() as Record<string, any>;
     return {

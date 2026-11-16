@@ -36,5 +36,6 @@ export class InferenceError extends Error {
 export interface InferenceProvider {
   id: InferenceProviderId;
   isAvailable(): boolean;
-  run(request: InferenceRequest): Promise<InferenceResult>;
+  /** Real providers require a Provider Runtime Gateway ticket; the mock ignores it. */
+  run(request: InferenceRequest, ticket?: import("../providers/gateway").DispatchTicket): Promise<InferenceResult>;
 }

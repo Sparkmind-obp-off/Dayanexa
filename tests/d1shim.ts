@@ -18,9 +18,12 @@ export function makeD1() {
     };
     return s;
   };
+  // Real D1 executes each batch as one server-side transaction; serialize them here like D1 does.
+  let chain: Promise<unknown> = Promise.resolve();
+  const runBatch = async (list: any[]) => { db.exec("BEGIN"); try { const out = []; for (const s of list) out.push(await s.run()); db.exec("COMMIT"); return out; } catch (e) { db.exec("ROLLBACK"); throw e; } };
   const d1 = {
     prepare: (sql: string) => stmt(sql),
-    batch: async (list: any[]) => { db.exec("BEGIN"); try { const out = []; for (const s of list) out.push(await s.run()); db.exec("COMMIT"); return out; } catch (e) { db.exec("ROLLBACK"); throw e; } },
+    batch: (list: any[]) => { const next = chain.then(() => runBatch(list)); chain = next.catch(() => undefined); return next; },
   };
   return { d1: d1 as unknown as D1Database, raw: db };
 }

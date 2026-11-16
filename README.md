@@ -26,7 +26,7 @@ The five engines are the product core. Customer, contributor, operator, identity
 - React 18 + TypeScript + Vite; Hono API on Cloudflare Pages Functions.
 - Clerk Production Google-only integration using `@clerk/react` and compatible backend SDK.
 - Cloudflare D1, private R2 artifacts and Workers AI binding.
-- Tavily search, Firecrawl selected-page extraction, Apify/Scrape.ly Actor adapter with allowlist and cost cap.
+- Tavily search, Firecrawl selected-page extraction, Apify/Scrape.ly Actor adapter, Workers AI and optional Groq — **every outbound call goes through the Provider Runtime Gateway** (`apps/api/src/providers/gateway.ts`): policy → authorized account → verified fresh quota → caps → atomic reservation → dispatch with single-use ticket → reconciliation → circuit breaker. Fail closed by default; no account rotation on 429/ban/quota; fallback only for outages via owner-approved, expiring rules. Owner controls: Admin & Resource Control → "Runtime gateway".
 - Demand/signal/evidence/opportunity, solution/capability/gap, agent/mission/task, artifact/delivery, quote/payment/invoice/ledger foundations.
 - Current subscription hypotheses: Free Rp0, Pro Rp149.000/30 days, Plus Rp399.000/30 days. These are not market-validated. Keep provider credits and mission budgets separate.
 - Live payment remains disabled unless owner authorizes a verified merchant setup.
@@ -34,6 +34,10 @@ The five engines are the product core. Customer, contributor, operator, identity
 ## Audited baseline
 
 Batch V2 source audit: `main @ 04b4bbe4dd37fd2b4710bcab55e90cc42a0db6fa` (16 Nov 2026). The audit found real provider adapter paths and meaningful CRUD/lifecycle foundations, but no complete durable discovery job pipeline, persistent niche cluster engine, verified capability readiness system, actual agent/tool execution runtime, automated isolated demo build/preview pipeline or consent-aware market presentation lifecycle. See [audit](docs/24-batch-v2-code-audit.md).
+
+## Provider Runtime Gateway — activation checklist (owner)
+
+After migration 0008 is applied, providers stay blocked until the owner, per provider: (1) sets the policy (enabled, unit type matching the meter — `neurons`/`tokens`/`credits`/`usd_micros` — and daily/monthly caps > 0); (2) registers an authorized account with capabilities (e.g. `search`, `scrape`, `inference:classification`, `actor:user~actor`), terms review date, unit price (0 = free; empty = unknown → blocked) and per-request/daily/monthly caps; (3) records a verified quota snapshot (dashboard/provider API/official page) with timestamp; (4) for Actors, approves the registry entry with an expiry. Paid use requires a scoped approval with spend cap and expiry.
 
 ## Development
 

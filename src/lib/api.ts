@@ -33,9 +33,9 @@ export async function publicGet<T = any>(path: string): Promise<T> {
 export function usePublic<T = any>(path: string) {
   return useQuery<T, ApiError>({ queryKey: ["public", path], queryFn: () => publicGet<T>(path) });
 }
-export function useGet<T = any>(path: string | null, opts: { refetchInterval?: number } = {}) {
+export function useGet<T = any>(path: string | null, opts: { refetchInterval?: number; enabled?: boolean } = {}) {
   const api = useApi();
-  return useQuery<T, ApiError>({ queryKey: [path], queryFn: () => api<T>(path!), enabled: Boolean(path), refetchInterval: opts.refetchInterval });
+  return useQuery<T, ApiError>({ queryKey: [path], queryFn: () => api<T>(path!), enabled: Boolean(path) && opts.enabled !== false, refetchInterval: opts.refetchInterval });
 }
 /** Mutation invalidating all cached queries on success so every list reflects server truth. */
 export function useAction<V = any, R = any>(fn: (api: Api, vars: V) => Promise<R>) {

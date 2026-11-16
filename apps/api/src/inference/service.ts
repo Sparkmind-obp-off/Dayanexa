@@ -9,6 +9,7 @@ import { estimateNeurons, estimateTokens, TASK_PROFILES } from "./profiles";
 import type { ChatMessage, InferenceProvider, InferenceProviderId, InferenceResult, TaskProfileId } from "./types";
 import { InferenceError } from "./types";
 import { WorkersAiProvider } from "./workersai";
+import { GatewayError, governedCall } from "../providers/gateway";
 
 export interface InferenceContext { requestId?: string; orgId?: string | null; userId?: string | null; promptVersion: string; schemaVersion?: string }
 export interface InferenceOutcome<T> { traceId: string; providerId: InferenceProviderId; modelId: string; data: T; estimatedNeurons: number; usageEstimated: boolean }
@@ -100,13 +101,34 @@ export async function runInference<T>(env: Env, d: D1Database, profile: TaskProf
   const started = Date.now();
   let result: InferenceResult | null = null;
   let lastError: InferenceError | null = null;
-  for (let attempt = 0; attempt < 2 && !result; attempt++) {
+  const runOnce = (signal: AbortSignal, ticket?: Parameters<InferenceProvider["run"]>[1]) =>
+    provider.run({ profile, modelId: cfg.modelId, messages, maxOutputTokens: cfg.maxOutputTokens, temperature: cfg.temperature, jsonMode: cfg.jsonMode, signal }, ticket);
+  if (provider.id === "mock") {
+    for (let attempt = 0; attempt < 2 && !result; attempt++) {
+      try { result = await withTimeout(25_000, (signal) => runOnce(signal)); }
+      catch (error) { lastError = error instanceof InferenceError ? error : new InferenceError("PROVIDER_ERROR", String(error), true); if (!lastError.transient) break; }
+    }
+  } else {
+    // Every real inference call passes the Provider Runtime Gateway (reserve worst case → dispatch → reconcile).
+    const unitType = provider.id === "workers-ai" ? "neurons" : "tokens";
+    const estimatedUnits = provider.id === "workers-ai" ? Math.max(worstCase, 0.001) : estimateTokens(inputChars) + cfg.maxOutputTokens;
     try {
-      result = await withTimeout(25_000, (signal) => provider.run({ profile, modelId: cfg.modelId, messages, maxOutputTokens: cfg.maxOutputTokens, temperature: cfg.temperature, jsonMode: cfg.jsonMode, signal }));
+      const out = await governedCall(env, d, { providerId: provider.id, capability: `inference:${profile}`, purpose: ctx.promptVersion, unitType, estimatedUnits,
+        idempotencyKey: `inf:${traceId}`, orgId: ctx.orgId ?? null, userId: ctx.userId ?? null, requestId: ctx.requestId },
+        async (ticket) => {
+          const r = await withTimeout(25_000, (signal) => runOnce(signal, ticket));
+          const inT = r.usage.inputTokens ?? estimateTokens(inputChars), outT = r.usage.outputTokens ?? estimateTokens(r.text.length);
+          return { value: r, unitsActual: provider.id === "workers-ai" ? estimateNeurons(profile, inT, outT) : inT + outT, providerRequestId: r.providerRequestId, usageEstimated: r.usage.estimated };
+        });
+      result = out.value;
     } catch (error) {
+      if (error instanceof GatewayError) {
+        const code = error.code === "CIRCUIT_OPEN" ? "CIRCUIT_OPEN" : error.code === "QUOTA_EXHAUSTED" ? "QUOTA_EXHAUSTED"
+          : ["BUDGET_EXCEEDED", "CONCURRENCY_LIMIT", "RESERVATION_RACE_LOST"].includes(error.code) ? "BUDGET_EXHAUSTED" : "PROVIDER_DISABLED";
+        await record("denied", { error: `GATEWAY_${error.code}`, policy: `gateway_${error.code.toLowerCase()}` });
+        throw new InferenceError(code, `[${error.code}] ${error.message}`);
+      }
       lastError = error instanceof InferenceError ? error : new InferenceError("PROVIDER_ERROR", String(error), true);
-      if (!lastError.transient || lastError.code === "RATE_LIMITED") break;
-      await new Promise((r) => setTimeout(r, 200 + Math.random() * 300));
     }
   }
   const latency = Date.now() - started;

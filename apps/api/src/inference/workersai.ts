@@ -1,5 +1,6 @@
 import type { InferenceProvider, InferenceRequest, InferenceResult } from "./types";
 import { InferenceError } from "./types";
+import { assertTicket, type DispatchTicket } from "../providers/gateway";
 
 /** Primary/default inference adapter using the native Workers AI binding (env.AI). */
 export class WorkersAiProvider implements InferenceProvider {
@@ -7,13 +8,14 @@ export class WorkersAiProvider implements InferenceProvider {
   constructor(private ai: Ai | undefined) {}
   isAvailable() { return Boolean(this.ai); }
 
-  async run(req: InferenceRequest): Promise<InferenceResult> {
-    if (!this.ai) throw new InferenceError("PROVIDER_NOT_CONFIGURED", "Workers AI binding AI is missing.");
+  async run(req: InferenceRequest, ticket?: DispatchTicket): Promise<InferenceResult> {
+    const ai = assertTicket(ticket, "workers-ai").binding as Ai | undefined;
+    if (!ai) throw new InferenceError("PROVIDER_NOT_CONFIGURED", "Workers AI binding AI is missing.");
     const input: Record<string, unknown> = { messages: req.messages, max_tokens: req.maxOutputTokens, temperature: req.temperature };
     if (req.jsonMode) input.response_format = { type: "json_object" };
     let raw: unknown;
     try {
-      raw = await (this.ai as unknown as { run: (m: string, i: unknown, o?: unknown) => Promise<unknown> }).run(req.modelId, input, { signal: req.signal });
+      raw = await (ai as unknown as { run: (m: string, i: unknown, o?: unknown) => Promise<unknown> }).run(req.modelId, input, { signal: req.signal });
     } catch (error) {
       throw mapWorkersAiError(error);
     }

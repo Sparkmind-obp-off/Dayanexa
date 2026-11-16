@@ -1,4 +1,37 @@
-# DAYANEXA — Batch V2 Code Audit for V3
+# DAYANEXA — Code Audit (Batch 0 refresh + Batch 5 Provider Runtime Gateway)
+
+## A. Batch 0 refresh — 16 November 2026, `main @ a7543346a9ca9c0419e80b446c3a090a43aef838`
+
+Evidence gathered (read-only unless stated):
+- Local `npm run ci` at that HEAD: typecheck OK, 25/25 tests, 7 migrations, secret scan clean, 0 high vulnerabilities, build OK.
+- GitHub Actions: last 5 runs on `main` = success (latest run `43809977784`, docs-only commit).
+- Cloudflare (read-only via BYOK token): Pages project `dayanexa`, latest production deployment `238af21e` built from **`04b4bbe`** (not HEAD). Remote D1 `dayanexa-production`: migration **0007 NOT applied**. Production health: D1/Workers AI/R2 bound, Clerk JWT key + secret present, **Clerk webhook secret missing**, payments `mock`.
+- Production Pages secrets present (names only): APIFY_API_TOKEN, ARTIFACT_SIGNING_SECRET, CLERK_JWT_KEY, CLERK_SECRET_KEY, FIRECRAWL_API_KEY, GROQ_API_KEY, SCRAPELY_API_KEY, SCRAPELY_USER_ID, TAVILY_API_KEY. CLERK_WEBHOOK_SECRET absent.
+
+Provider call-site inventory before Batch 5 (all now routed through the gateway):
+| Provider | Adapter | Call site(s) | Previous control |
+|---|---|---|---|
+| Tavily | `providers/tavily.ts` | `routes/intel.ts` POST /discovery/search | env daily cap via non-atomic SUM, no account model |
+| Firecrawl | `providers/firecrawl.ts` | `routes/intel.ts` POST /discovery/extract | same |
+| Apify / Scrape.ly | `providers/actors.ts` | `routes/intel.ts` POST /discovery/actor-run | env allowlist + env max charge; registry not enforced |
+| Workers AI | `inference/workersai.ts` | `inference/service.ts` ← intel classify, me ai-draft, ops ai-assist | neuron budget via non-atomic SUM, per-isolate breaker |
+| Groq | `inference/groq.ts` | `inference/service.ts` (disabled by default) | flag only |
+
+Defects found: budget checks were check-then-act (race could overspend); 0007 policy/account/Actor registry tables were persisted but **not enforced** at runtime; Actor approval had no expiry; circuit breaker per isolate only; 429 had no Retry-After handling.
+
+## B. Batch 5 — Provider Runtime Gateway (implemented in source; CI evidence in batch report)
+
+- `apps/api/migrations/0008_provider_runtime_gateway.sql` (additive): AccountProfile columns (capabilities, unit type/price, per-request cap, concurrency, region, multi-account terms flag, quota max age), `quota_snapshots`, `usage_reservations`, `provider_approvals`, `fallback_rules` (CHECK: trigger `upstream_error` only), `circuit_breakers`, `actor_registry.approval_expires_at`, `provider_usage.account_id/reservation_id`.
+- `apps/api/src/providers/gateway.ts`: single `governedCall()`; fail-closed evaluation; atomic `INSERT…SELECT…WHERE` reservation re-checking every cap; settle/release/`unknown_charge`; persistent breaker honoring Retry-After; auth denial auto-pauses, provider quota exhaustion marks exhausted; deterministic primary account (no rotation); outage-only single fallback via active, unexpired owner rule with multi-account terms confirmed on both accounts; paid usage only with scoped, capped, unexpired approval; schema guard (`SCHEMA_NOT_MIGRATED`).
+- Adapters require an unforgeable single-use ticket (`assertTicket`) and take the credential from it — direct calls throw `GATEWAY_REQUIRED` before any network I/O. Credential references are restricted to provider-specific binding names.
+- Owner-only APIs under `/api/v1/admin/*`: gateway status, quota snapshots, paid approvals (+revoke), fallback rules (+revoke), reservations (+manual reconcile of unknown_charge), circuit breakers (+reset); account/Actor admin extended. Admin UI tab "Runtime gateway".
+- Tests: `tests/gateway.test.ts` (43 cases) incl. pre-dispatch blocking for 17 conditions, concurrent overspend, concurrency limit, reconciliation, unknown charge, 429/ban/quota no-rotation, outage-only fallback, paid approval, forged-ticket bypass, static no-bypass scan, secret redaction, unmigrated schema.
+
+Not yet done: production D1 migration 0007+0008 (owner gate), production configuration of policies/accounts/snapshots (all provider calls are blocked until configured — intentional), automated quota refresh from provider APIs, Queues/Workflows, Batches 1–4 and 6–11.
+
+---
+
+# (Historical) DAYANEXA — Batch V2 Code Audit for V3
 
 **Audit date:** 16 November 2026  
 **Audited branch:** `main`  
