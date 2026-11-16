@@ -10,6 +10,7 @@ Canonical architecture is now **V3 — Demand-to-Execution**. Start with:
 - [Agentic Execution Engine](docs/22-agentic-execution-engine.md)
 - [Market Delivery Engine](docs/23-market-delivery-engine.md)
 - [Batch V2 Code Audit](docs/24-batch-v2-code-audit.md)
+- [Admin & Resource Control Center](docs/25-admin-resource-control-center.md)
 - [V3 Roadmap](docs/17-master-upgrade-and-execution-roadmap.md)
 - [Master System](docs/16-master-system-and-full-stack-implementation.md)
 - [Master Implementation Prompt](prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md)
@@ -47,7 +48,8 @@ npm run dev:web
 
 - Cloudflare BYOK deployment is a separate action from a Git push; verify deployed commit/build ID.
 - Verify Google sign-in and authenticated browser journeys; source code alone is not proof.
-- Confirm actual GitHub Actions workflow exists under `.github/workflows/` and has a successful run.
+- Active CI workflow is `.github/workflows/ci.yml`; verify its run result after each push. The source template is `docs/ci/ci.workflow.yml`.
+- `.env.production` and `.env.development` are prohibited from Git; CI fails if either is tracked. Keep `.env.example` only.
 - Verify Clerk webhook secret in Cloudflare; never paste secret values into chat.
 - Keep payment mode mock and live payment disabled until sandbox, webhook, reconciliation and owner approval.
 - No production D1 migration, paid Actor, provider spend beyond approved caps, external outreach, public demo deployment, refund or payout without explicit approval.
