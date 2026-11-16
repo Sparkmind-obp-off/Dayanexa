@@ -246,3 +246,31 @@ State exact commit, changed files, schema/routes/UI, commands run, test counts, 
 ## Admin & Resource Control Center (mandatory)
 
 Read and implement `docs/25-admin-resource-control-center.md` as a first-class owner/operator workspace alongside the existing 14 workspaces. Include customer management, contributor management, provider registry, per-Actor registry and approvals, provider/Actor budgets, Cost & Usage Center, Cloudflare/CI operations visibility, and immutable audit. Do not build a display-only dashboard: every mutation requires server-side permission, validation, persistence, audit and tests. Provider budget/enablement changes are owner-controlled; no paid fallback or auto top-up. Secrets remain in Cloudflare/provider secret stores and must never be exposed to the browser. CI must reject tracked .env.production/.env.development files and must never delete production/customer/financial/audit data.
+
+
+---
+
+# V3 ADDENDUM — Provider Runtime Governance & Account Failover (mandatory)
+
+Before implementing provider or Actor management, read [docs/26-provider-runtime-governance.md](../docs/26-provider-runtime-governance.md) and treat it as a binding requirement alongside docs/25-admin-resource-control-center.md.
+
+Do not build only a provider/account registry or dashboard. Implement a single server-side Provider Runtime Gateway and route every provider call through it: Workers AI, Groq, Tavily, Firecrawl, Apify and Scrape.ly, including API handlers, queue consumers, scheduled jobs and agent tools.
+
+For each operation, the gateway must:
+1. Resolve the task, tenant, mission, environment, data classification and required capability.
+2. Select only an active, verified, terms-compliant AccountProfile allowed for that exact task.
+3. Check fresh provider quota, provider rate limits, account health, credential reference, DAYANEXA per-request/daily/monthly caps and mission budget.
+4. Atomically reserve upper-bound units and cost before dispatch. If reservation fails, do not call the provider.
+5. Dispatch through the server-side adapter; persist request ID, status, usage, error and idempotency.
+6. Reconcile actual units/cost and release unused reservation. Handle ambiguous timeouts as unknown-charge states; never blindly retry.
+7. Record policy decision, account selection, fallback, reservation, dispatch, reconciliation and audit trail without exposing secrets.
+
+When an account quota is exhausted, stop calls to that account/capability and show the verified reset window. An alternative account may be selected only if it is registered, independently authorized, allowed by provider terms, approved for that source/task, healthy, within its own verified quota and within the same explicit budget. Do not rotate accounts to evade rate limits, bans, suspensions, free-tier/trial restrictions or provider terms. A 429 must respect Retry-After/reset and circuit-breaker rules; it must not trigger account rotation.
+
+Fail closed on unknown/stale quota or pricing. Never invent free allowance or assume multiple API keys equal multiple free accounts. Default paid use, overage, paid fallback and auto top-up to OFF. No silent paid fallback, billing-plan change, account purchase or subscription. Owner approval must specify exact account/provider, capability, maximum spend, period and expiry.
+
+Implement provider-specific quota semantics rather than a generic credits counter: Workers AI Neurons/model limits; Groq account/model limits; Tavily search credits/requests; Firecrawl pages/credits/concurrency; Apify Actor compute/proxy/storage and per-Actor caps; Scrape.ly's actual task-specific unit/pricing. Verify current official terms/pricing and account dashboards before enabling. Apify OR Scrape.ly per source/task unless a documented owner-approved benchmark justifies both.
+
+Required proof: every call site is behind the gateway; disabled/unauthorized/stale/over-budget accounts are blocked before network dispatch; atomic concurrent reservations cannot overspend; usage is reconciled; compliant fallback works; rate-limit/ban/suspension never rotates accounts; paid usage stays blocked absent approval; audit and secret-redaction tests pass. Do not claim runtime enforcement from documentation, UI, or adapter existence alone.
+
+Production D1 migrations, secret changes, provider activation, external account connections, paid use and production deployment require explicit owner approval. Report design/specification, source implementation, automated tests, provider sandbox, and production verification as separate states.
