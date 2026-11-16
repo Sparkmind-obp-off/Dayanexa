@@ -1,10 +1,14 @@
-# DAYANEXA — Code Audit (Batch 0 refresh + Batch 5 Provider Runtime Gateway)
+# DAYANEXA — Code Audit (historical Batch 0 + Batch 5; refresh required at current HEAD)
 
-## A. Batch 0 refresh — 16 November 2026, `main @ a7543346a9ca9c0419e80b446c3a090a43aef838`
+## Current audit status — 16 November 2026
+
+The source-level Batch 5 gateway audit below was performed before the current documentation-only commits. Current repository HEAD must be re-audited before any source implementation. The latest recorded HEAD at this update is the master documentation/prompt consolidation; no local test/build or production verification was run for that documentation-only HEAD. GitHub Actions has been retired; do not rely on its historical runs as current verification.
+
+## A. Historical Batch 0 refresh — 16 November 2026, `main @ a7543346a9ca9c0419e80b446c3a090a43aef838`
 
 Evidence gathered (read-only unless stated):
 - Local `npm run ci` at that HEAD: typecheck OK, 25/25 tests, 7 migrations, secret scan clean, 0 high vulnerabilities, build OK.
-- GitHub Actions: last 5 runs on `main` = success (latest run `43809977784`, docs-only commit).
+- Historical GitHub Actions: last 5 runs on `main` = success (latest run `43809977784`, docs-only commit). These runs are historical only; the workflow is now retired.
 - Cloudflare (read-only via BYOK token): Pages project `dayanexa`, latest production deployment `238af21e` built from **`04b4bbe`** (not HEAD). Remote D1 `dayanexa-production`: migration **0007 NOT applied**. Production health: D1/Workers AI/R2 bound, Clerk JWT key + secret present, **Clerk webhook secret missing**, payments `mock`.
 - Production Pages secrets present (names only): APIFY_API_TOKEN, ARTIFACT_SIGNING_SECRET, CLERK_JWT_KEY, CLERK_SECRET_KEY, FIRECRAWL_API_KEY, GROQ_API_KEY, SCRAPELY_API_KEY, SCRAPELY_USER_ID, TAVILY_API_KEY. CLERK_WEBHOOK_SECRET absent.
 
@@ -150,6 +154,6 @@ Add Demo/MarketPresentation/consent records, preview revocation, presentation ap
 
 ## 8. Audit confidence and caveats
 
-This audit is based on source code and schema inspection at the stated Git commit. It does not prove production credentials, external provider entitlements, current actor compatibility, real Threads access, production D1 state, deployed bundle parity, or actual end-to-end behavior. The V2 test files declare tests for payment, lifecycle and provider controls; this audit did not execute those tests. A clean current CI run and real controlled smoke tests remain separate acceptance evidence.
+This audit is based on source code and schema inspection at the stated Git commit. It does not prove production credentials, external provider entitlements, current actor compatibility, real Threads access, production D1 state, deployed bundle parity, or actual end-to-end behavior. The V2 test files declare tests for payment, lifecycle and provider controls; this audit did not execute those tests. Fresh local validation using the current package scripts and real controlled smoke tests remain separate acceptance evidence.
 
 No production database migration, provider activation, paid Actor run, payment configuration or deployment was performed as part of this audit.
