@@ -353,3 +353,97 @@ export function Governance() {
     {tab === "Audit" && <Q q={audit}>{(d) => <Table rows={d.items} empty="Belum ada event audit" cols={[{ h: "Waktu", r: (a: any) => <span className="small">{dt(a.created_at)}</span> }, { h: "Aktor", r: (a: any) => <span className="small">{a.actor_type} {short(a.actor_user_id)}</span> }, { h: "Aksi", r: (a: any) => <b className="small">{a.action}</b> }, { h: "Sumber daya", r: (a: any) => <span className="small">{a.resource_type} {short(a.resource_id)}</span> }, { h: "Hasil", r: (a: any) => <Badge v={a.outcome} /> }, { h: "Metadata", r: (a: any) => <span className="mono small dim clip" title={a.metadata_json}>{a.metadata_json}</span> }]} />}</Q>}
   </div>;
 }
+
+
+// 15. Admin & Resource Control Center — owner-only operational overview.
+export function AdminControl() {
+  const api = useApi();
+  const [tab, setTab] = useState("Ringkasan");
+  const customers = useGet<any>("/customers");
+  const users = useGet<any>("/users");
+  const providers = useGet<any>("/providers");
+  const benchmarks = useGet<any>("/discovery/benchmarks");
+  const ai = useGet<any>("/ai/status");
+  const health = usePublic<any>("/health");
+  const contributors = (users.data?.items ?? []).filter((u: any) => u.contributor);
+  const usd = (micros: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 4 }).format((micros ?? 0) / 1_000_000);
+  const customerItems = customers.data?.items ?? [];
+  const providerItems = providers.data?.providers ?? [];
+  const usageItems = providers.data?.usage ?? [];
+  const actorItems = benchmarks.data?.items ?? [];
+  return <div className="stack">
+    <div className="alert warn small">Pusat kontrol administratif. Data dan tindakan dibatasi oleh izin owner. Perubahan provider, budget, Actor, dan infrastruktur belum dapat dilakukan dari dashboard sampai policy API persisten selesai dibangun.</div>
+    <Tabs tabs={["Ringkasan", "Pelanggan", "Kontributor", "Provider & biaya", "Actor", "Cloudflare & CI"]} value={tab} onChange={setTab} />
+    {tab === "Ringkasan" && <div className="stack">
+      <div className="grid g4">
+        <Stat label="Organisasi pelanggan" value={customerItems.length} note="Organisasi tercatat di D1" />
+        <Stat label="Kontributor" value={contributors.length} note="Profil kontributor terdaftar" />
+        <Stat label="Provider terdaftar" value={providerItems.length} note="Termasuk provider opsional" />
+        <Stat label="Benchmark Actor" value={actorItems.length} note="Riwayat run yang tercatat" />
+      </div>
+      <div className="grid g2">
+        <div className="card"><h3>Identitas & data</h3><dl className="kv"><dt>Pengguna terdaftar</dt><dd>{users.data?.items?.length ?? "—"}</dd><dt>Kontributor menunggu verifikasi</dt><dd>{contributors.filter((u: any) => u.contributor?.status === "pending").length}</dd><dt>Kontributor terverifikasi</dt><dd>{contributors.filter((u: any) => u.contributor?.status === "verified").length}</dd><dt>Organisasi pelanggan</dt><dd>{customerItems.length}</dd></dl><p className="small"><Link to="/app/w/governance">Buka Governance & Audit</Link></p></div>
+        <div className="card"><h3>Resource & biaya</h3><dl className="kv"><dt>Provider aktif</dt><dd>{providerItems.filter((p: any) => p.enabled).length}</dd><dt>Baris pemakaian 30 hari</dt><dd>{usageItems.length}</dd><dt>Actor benchmark</dt><dd>{actorItems.length}</dd><dt>AI default</dt><dd>{ai.data?.status?.defaultProvider ?? "—"}</dd></dl><p className="small"><Link to="/app/w/market-radar">Buka Market Radar</Link> · <Link to="/app/w/ledger">Buka Economic Ledger</Link></p></div>
+      </div>
+    </div>}
+    {tab === "Pelanggan" && <div className="stack">
+      <Section title="Organisasi pelanggan" sub="Daftar organisasi dan jumlah request. Detail billing, suspend organisasi, dan ekspor terkontrol memerlukan endpoint admin khusus.">
+        <Q q={customers}>{(d) => <Table rows={d.items} empty="Belum ada organisasi pelanggan" cols={[{ h: "Organisasi", r: (o: any) => <b>{o.name}</b> }, { h: "Jenis", r: (o: any) => o.kind }, { h: "Request", r: (o: any) => o.requests }, { h: "ID", r: (o: any) => <span className="mono small">{short(o.id)}</span> }]} />}</Q>
+      </Section>
+      <p className="small muted">Riwayat request, quote, invoice, pembayaran, misi, dukungan dan privasi tetap tersedia melalui workspace Governance, Commercial Control, Delivery dan Economic Ledger.</p>
+    </div>}
+    {tab === "Kontributor" && <Section title="Pengelolaan kontributor" sub="Verifikasi dan penangguhan menggunakan API governance yang sudah tersedia.">
+      <Q q={users}>{(d) => <Table rows={d.items.filter((u: any) => u.contributor)} empty="Belum ada profil kontributor" cols={[
+        { h: "Kontributor", r: (u: any) => <div><b>{u.display_name ?? "—"}</b><div className="small dim">{u.email ?? u.id}</div></div> },
+        { h: "Status", r: (u: any) => <Badge v={u.contributor.status} /> },
+        { h: "Keahlian", r: (u: any) => <span className="small">{u.contributor.headline ?? "—"}</span> },
+        { h: "Tindakan", r: (u: any) => <div className="row">{u.contributor.status === "pending" && <ActionButton run={() => post(api, `/contributors/${u.id}/verify`, { status: "verified", note: "Diverifikasi dari Admin Control Center" }).then(() => users.refetch())}>Verifikasi</ActionButton>}{u.contributor.status === "verified" && <ActionButton cls="btn danger sm" confirm="Tangguhkan kontributor ini?" run={() => post(api, `/contributors/${u.id}/verify`, { status: "suspended", note: "Penangguhan oleh owner" }).then(() => users.refetch())}>Tangguhkan</ActionButton>}</div> },
+      ]} />}</Q>
+    </Section>}
+    {tab === "Provider & biaya" && <div className="stack">
+      <div className="alert warn small">Pemantauan tersedia; pengubahan budget dan aktivasi provider belum dibuka. Batas saat ini berasal dari konfigurasi server/environment dan hard-stop yang sudah ada. Tidak ada paid fallback otomatis.</div>
+      <Section title="Provider registry" sub="Konfigurasi ditampilkan sebagai status saja; nilai secret tidak pernah dikirim ke browser.">
+        <Q q={providers}>{(d) => <Table rows={d.providers} empty="Belum ada provider" cols={[
+          { h: "Provider", r: (p: any) => <b>{p.id}</b> }, { h: "Layer", r: (p: any) => p.layer },
+          { h: "Terkonfigurasi", r: (p: any) => <Badge v={p.configured ? "success" : "pending"} /> },
+          { h: "Aktif", r: (p: any) => <Badge v={p.enabled ? "active" : "draft"} /> },
+          { h: "Mode", r: (p: any) => <span className="small">{p.mode}</span> },
+          { h: "Cap harian", r: (p: any) => p.dailyCap ?? "Belum ditetapkan" },
+          { h: "Satuan", r: (p: any) => p.billingUnit },
+        ]} /></Q>
+      </Section>
+      <Section title="Biaya & pemakaian provider" sub="Biaya USD ditampilkan terpisah dari biaya misi IDR. Angka biaya tetap mengikuti status estimasi/realisasi sumber.">
+        <Q q={providers}>{(d) => <Table rows={d.usage} empty="Belum ada pemakaian tercatat" cols={[
+          { h: "Tanggal", r: (u: any) => u.day }, { h: "Provider", r: (u: any) => u.provider_id },
+          { h: "Status", r: (u: any) => <Badge v={u.status} /> }, { h: "Panggilan", r: (u: any) => u.calls },
+          { h: "Unit", r: (u: any) => `${u.units} ${u.unit_type}` },
+          { h: "Biaya tercatat", r: (u: any) => usd(u.cost_usd_micros) },
+        ]} /></Q>
+      </Section>
+      <p className="small"><Link to="/app/w/learning">Lihat analitik provider</Link> · <Link to="/app/w/ledger">Lihat biaya langsung dan ledger misi</Link></p>
+    </div>}
+    {tab === "Actor" && <Section title="Riwayat Actor Apify / Scrape.ly" sub="Riwayat benchmark saat ini. Registry Actor yang dapat diedit, schema input, review terms dan budget per Actor menjadi implementasi berikutnya.">
+      <Q q={benchmarks}>{(d) => <Table rows={d.items} empty="Belum ada benchmark Actor" cols={[
+        { h: "Sumber", r: (b: any) => b.source_label }, { h: "Provider", r: (b: any) => b.provider_id },
+        { h: "Actor ID", r: (b: any) => <span className="mono small">{b.actor_id}</span> },
+        { h: "Item", r: (b: any) => b.items_returned }, { h: "Diterima", r: (b: any) => b.items_accepted ?? "—" },
+        { h: "Biaya", r: (b: any) => usd(b.cost_usd_micros) }, { h: "Hasil", r: (b: any) => <Badge v={b.success ? "success" : "failure"} /> },
+        { h: "Waktu", r: (b: any) => dt(b.created_at) },
+      ]} /></Q>
+    </Section>}
+    {tab === "Cloudflare & CI" && <div className="stack">
+      <Section title="Runtime & bindings" sub="Status binding berasal dari health endpoint produksi yang aman dibaca. Ini bukan bukti backup/restore atau ketahanan workflow.">
+        {health.data ? <div className="grid g3">
+          {Object.entries(health.data.bindings ?? {}).map(([key, value]) => <div className="card" key={key}><div className="small muted">{key.toUpperCase()}</div><Badge v={value ? "success" : "failure"} /> <b>{value ? "Tersedia" : "Tidak tersedia"}</b></div>)}
+          <div className="card"><div className="small muted">Environment</div><b>{health.data.environment}</b></div>
+          <div className="card"><div className="small muted">Clerk webhook secret</div><Badge v={health.data.identity?.clerkWebhookSecret ? "success" : "pending"} /></div>
+          <div className="card"><div className="small muted">Payments</div><Badge v={health.data.payments?.mode === "live" ? "warning" : "success"} /> {health.data.payments?.mode}</div>
+        </div> : <div className="alert">Health endpoint belum dapat dibaca.</div>}
+      </Section>
+      <Section title="Workers AI">
+        <Q q={ai}>{(d) => <div className="grid g3"><Stat label="Provider default" value={d.status.defaultProvider} /><Stat label="Binding AI" value={d.status.workersAi.bindingPresent ? "Tersedia" : "Tidak ada"} /><Stat label="Panggilan hari ini" value={d.totals.calls_today ?? 0} /></div>}</Q>
+      </Section>
+      <div className="alert warn small">CI aktif di .github/workflows/ci.yml. Status run, deployment commit, D1 backup/restore, R2 lifecycle, Queues dan Workflows belum ditarik ke dashboard; tidak ditampilkan sebagai PASS tanpa pemeriksaan nyata.</div>
+    </div>}
+  </div>;
+}
