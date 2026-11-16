@@ -17,17 +17,19 @@ Before writing or changing code, read:
 - `README.md`
 - `docs/17-master-upgrade-and-execution-roadmap.md`
 - the updated `docs/14-identity-monetization-and-payments.md`
-- the entire current source tree, package manifests, migrations, CI and environment examples.
+- the entire current source tree, package manifests, migrations, tests, local validation scripts, Wrangler config and environment examples; do not use GitHub Actions CI/CD.
 
 The master specification is the governing implementation contract. Do not ask the owner to repeat decisions already documented. Do not assume existing code or adapters are correct; audit them.
 
 ## Mission
-Deliver the complete DAYANEXA Agentic Opportunity & Execution OS as a real, integrated, secure, production-oriented full-stack system. Implement frontend, backend, database, identity, provider integrations, workflows, payments, economic ledger, operations, tests, CI and deployment configuration as one coherent product—not disconnected demos, static mockups or isolated code snippets.
+Deliver the complete DAYANEXA Agentic Opportunity & Execution OS as a real, integrated, secure, production-oriented full-stack system. Implement frontend, backend, database, identity, provider integrations, durable workflows, payments, economic ledger, operations and tests as one coherent product—not disconnected demos, static mockups or isolated code snippets. Follow docs/29 for full implementation and defect resolution. Use local checks and manual Cloudflare Wrangler deployment only; GitHub Actions CI/CD is retired.
 
 DAYANEXA doctrine: **Discover demand. Build the capability. Deliver the outcome.**
 
 ## Mandatory architecture
-- Frontend: React + TypeScript + Vite, responsive public and authenticated application, all 14 command-center workspaces, customer and contributor journeys.
+
+The end-to-end implementation contract in `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` is mandatory. Do not stop at audit, docs, CRUD or placeholder UI; implement every engine and cross-cutting workflow, reproduce and fix defects, and prove each phase with tests and observable evidence.
+- Frontend: React + TypeScript + Vite, responsive public and authenticated application, all 15 workspaces (the original 14 role workspaces plus owner-only Admin & Resource Control Center), customer and contributor journeys.
 - API: Cloudflare Workers + Hono with typed routes, service layer, repositories and validated contracts.
 - Persistence: Cloudflare D1 migrations and repositories; private Cloudflare R2 for files/artifacts.
 - Async: Queues and durable Workflows where required; use Durable Objects only for justified coordination/realtime needs.
@@ -38,7 +40,7 @@ DAYANEXA doctrine: **Discover demand. Build the capability. Deliver the outcome.
 - Provider registry: Workers AI, optional GroqCloud, Tavily, Firecrawl, Apify, Scrape.ly, and optional later LangGraph/LangChain/CrewAI with explicit cost/feature flags.
 - Payment gateway registry: Duitku, Xendit, Midtrans and Faspay behind one normalized adapter interface.
 - Economics: payment events, reconciliation, refunds/disputes, balanced double-entry ledger, costs, revenue, margin and settlement liability.
-- CI: frontend and API checks, tests, migration validation, adapter fixtures, secret scanning, dependency audit and deployment smoke tests.
+- Local validation: frontend/API typecheck, tests, migration validation, adapter fixtures, secret scanning, dependency audit and build; manual Wrangler deployment and production smoke are separate. No GitHub Actions CI/CD.
 
 ## V2 baseline delivery order (historical; superseded by V3 override below)
 
@@ -50,7 +52,7 @@ The canonical implementation contract is now V2.0. Follow exactly these four pha
 - Verify owner bootstrap is restricted to a verified Google identity on the configured allowlist, one-time and audited.
 - Inspect actual Cloudflare Pages source/deployment state. The latest inspected project has no Git source connection and the last deployment was ad-hoc; pushing GitHub alone does not prove production updated.
 - Repair authorized GitHub–Pages connection or implement a reproducible, owner-authorized deployment process. Do not bypass account permissions.
-- Add/repair CI and run clean install, typecheck, tests, migrations, secret scan, dependency audit, build and deploy smoke tests.
+- Run local clean install, typecheck, tests, migration validation, secret scan, dependency audit and build; deploy manually through Wrangler and run separate production smoke tests.
 - Test Google sign-up/sign-in/sign-out/refresh, `/api/v1/me`, expired sessions, unauthorized access, role and tenant isolation.
 **Gate:** new Clerk SDK is actually deployed to `dayanexa.biz.id`; real Google auth and protected API pass.
 
@@ -79,13 +81,13 @@ E. Partner/marketplace commission/split settlement only after legal, KYC, gatewa
 
 ### Phase 4 — Complete operating OS, intelligence and controlled pilot
 - Finish demand evidence, source provenance, capability formation, agent/human orchestration, mission durability, quality/delivery and artifact security.
-- Finish all 14 permissioned command-center workspaces, notifications, support, economic ledger, governance and audit.
+- Finish all 15 permissioned workspaces, notifications, support, economic ledger, governance and audit.
 - Implement observability, provider cost governor, backups/restore, retention/deletion, incident response and legal review.
 - Run a limited pilot and measure Verified Economic Resolution, paid conversion, quote acceptance, delivery acceptance, disputes/refunds, contribution margin, cost per outcome, repeat purchase and contributor payouts actually paid.
 **Gate:** repeated accepted and paid outcomes with reconciled positive unit economics and safe operations; owner go/no-go before wider launch.
 
 ## Execution protocol
-1. **Audit first.** Inspect repository and CI. List verified facts, defects, gaps, security risks, duplicated code and assumptions. Do not overwrite valid work.
+1. **Audit first.** Inspect repository, local validation scripts and Wrangler release setup. List verified facts, defects, gaps, security risks, duplicated code and assumptions. Do not overwrite valid work.
 2. **Produce a build plan.** Map every requirement to code path, schema, API, UI, tests and acceptance evidence. Identify owner-only dependencies.
 3. **Implement in dependency order.** Foundation → Clerk Production and authorization → data/domain APIs → provider registry and intelligence → opportunity/capability → execution → commercial/payment/ledger → command center → pilot operations.
 4. **Integrate continuously.** Every frontend workflow must call real typed API routes; every API route must use domain services, repositories, validation, auth and audit. No dead buttons or fake live metrics.
@@ -147,7 +149,7 @@ Do not call the project complete because the dashboard renders or code has been 
 - Frontend and backend integrated.
 - Server-side authorization.
 - Loading/empty/error/success states.
-- Automated tests and CI evidence.
+- Automated test evidence from local commands; no GitHub Actions.
 - Security and cost controls.
 - Updated docs/runbooks.
 - Deployment and smoke-test evidence where available.
@@ -233,7 +235,7 @@ Clerk Production Google-only remains mandatory. Keep account subscription entitl
 
 ## Execution sequence and gates
 
-- V3-A: baseline/CI/deployment integrity and discovery reliability.
+- V3-A: baseline/local validation/Wrangler deployment integrity and discovery reliability.
 - V3-B: demand clustering, scoring and validation.
 - V3-C: SolutionSpec and capability readiness.
 - V3-D: actual agent/tool runtime and working tested demo.
@@ -247,7 +249,7 @@ State exact commit, changed files, schema/routes/UI, commands run, test counts, 
 
 ## Admin & Resource Control Center (mandatory)
 
-Read and implement `docs/25-admin-resource-control-center.md` as a first-class owner/operator workspace alongside the existing 14 workspaces. Include customer management, contributor management, provider registry, per-Actor registry and approvals, provider/Actor budgets, Cost & Usage Center, Cloudflare/CI operations visibility, and immutable audit. Do not build a display-only dashboard: every mutation requires server-side permission, validation, persistence, audit and tests. Provider budget/enablement changes are owner-controlled; no paid fallback or auto top-up. Secrets remain in Cloudflare/provider secret stores and must never be exposed to the browser. CI must reject tracked .env.production/.env.development files and must never delete production/customer/financial/audit data.
+Read and implement `docs/25-admin-resource-control-center.md` as a first-class owner/operator workspace alongside the existing 14 workspaces. Include customer management, contributor management, provider registry, per-Actor registry and approvals, provider/Actor budgets, Cost & Usage Center, Cloudflare/deployment operations visibility, and immutable audit. Do not build a display-only dashboard: every mutation requires server-side permission, validation, persistence, audit and tests. Provider budget/enablement changes are owner-controlled; no paid fallback or auto top-up. Secrets remain in Cloudflare/provider secret stores and must never be exposed to the browser. Local secret checks must reject tracked .env.production/.env.development files. Manual release and maintenance must never delete production/customer/financial/audit data.
 
 
 ---
@@ -276,3 +278,8 @@ Implement provider-specific quota semantics rather than a generic credits counte
 Required proof: every call site is behind the gateway; disabled/unauthorized/stale/over-budget accounts are blocked before network dispatch; atomic concurrent reservations cannot overspend; usage is reconciled; compliant fallback works; rate-limit/ban/suspension never rotates accounts; paid usage stays blocked absent approval; audit and secret-redaction tests pass. Do not claim runtime enforcement from documentation, UI, or adapter existence alone.
 
 Production D1 migrations, secret changes, provider activation, external account connections, paid use and production deployment require explicit owner approval. Report design/specification, source implementation, automated tests, provider sandbox, and production verification as separate states.
+
+
+## Execution priority and closure
+
+Use `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` as the authoritative implementation checklist. Audit exact HEAD, map every concept to code, and work through all phases. For every defect, reproduce it, identify root cause, add a regression test, fix it and verify both success and failure paths. Do not stop after documentation or after one phase. Keep working on independent safe items while external/owner gates remain pending. Report exact commit, source changes, migrations, commands/results, production evidence, blockers and next batch. Never claim full implementation until all acceptance criteria are met.
