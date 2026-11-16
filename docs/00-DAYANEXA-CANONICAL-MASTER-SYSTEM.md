@@ -18,7 +18,10 @@ This file is the single top-level source of truth. Detailed contracts remain bin
 - `docs/25-admin-resource-control-center.md` — admin control plane.
 - `docs/26-provider-runtime-governance.md` — provider account/quota/runtime/fallback rules.
 - `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.\n- `docs/28-production-build-artifact-and-pages-deployment.md` — canonical manual Wrangler build, deployment, production smoke tests and rollback contract.
-- `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — execution prompt.
+- `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` — binding execution contract for implementing all five engines, closing defects, integrating every journey and proving acceptance.
+- `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — canonical execution prompt; must implement, test and resolve defects, not stop at documentation.
+
+The implementation and defect-resolution contract in docs/29 is mandatory for every implementation batch. If any detailed document conflicts with the manual Wrangler release decision, this master and docs/28 prevail.
 
 Precedence: this master governs product intent, scope and phase order; detailed specs govern contracts; ADRs govern approved deviations. Source code is implementation evidence, not permission to silently change product intent.
 
@@ -296,3 +299,23 @@ V3 is complete only when five engines work end-to-end; clusters and validated de
 ## 17. Required batch report
 
 Report exact branch/HEAD, changed files/migrations, code reused/implemented, test commands/results, local command results and source commit, provider calls/usage/cost (never secrets), browser/production evidence, deployment status, remaining defects/owner actions and what was not tested. Explicitly state whether production D1, secrets, provider spend, external contact, live payment or deployment was touched.
+
+## 18. Mandatory end-to-end implementation and defect resolution
+
+The system is not complete because its concepts have been documented or its screens exist. Execute the binding contract in `docs/29-end-to-end-implementation-and-defect-resolution-contract.md`.
+
+The complete chain is DiscoveryBrief → DiscoveryJob/SourceRun → Signal/Evidence → DemandCluster/Validation → Opportunity → SolutionSpec/CapabilityPlan → ReadinessProof → Mission/TaskGraph → AgentRun/ToolInvocation or HumanAssignment → Artifact/TestReport/Demo → QualityReview → consented MarketPresentation/Feedback → Offer/Acceptance → verified Payment/Delivery → Settlement/Ledger → Learning.
+
+For every stage, implement canonical state, server-side authorization, persistence, validated API, functional UI, idempotency/recovery, audit, cost attribution and automated acceptance tests. A stage cannot be marked complete from CRUD, mock data, a UI label or documentation alone.
+
+Mandatory execution rules:
+1. Audit exact current HEAD and trace every concept to actual source code before editing.
+2. Reuse working foundations; do not rebuild the project from scratch.
+3. Reproduce each defect, identify root cause, add regression coverage, fix it and verify adjacent success/failure paths.
+4. Implement the missing end-to-end workflow, not a placeholder or plan-only response.
+5. Preserve the five-engine doctrine, ten domains, canonical entities, 15 workspaces, owner control plane, customer/contributor/operator/finance journeys, provider governance, economics and legal/privacy controls.
+6. Keep owner approval gates separate from source implementation. Never bypass them to claim completion.
+7. Work in small reviewable batches and continue through all safe phases; stop only at an explicit owner gate, unavailable access, material ambiguity or verified phase boundary.
+8. Report specified, source-implemented, locally tested, provider/sandbox-verified and production-verified states separately.
+
+The ordered phases and detailed acceptance tests are binding in docs/29. Do not declare V3 complete until every engine and cross-cutting journey meets its acceptance criteria.
