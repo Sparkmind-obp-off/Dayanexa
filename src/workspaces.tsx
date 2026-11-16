@@ -405,6 +405,27 @@ export function AdminControl() {
     </Section>}
     {tab === "Provider & biaya" && <div className="stack">
       <div className="alert warn small">Pemantauan tersedia; pengubahan budget dan aktivasi provider belum dibuka. Batas saat ini berasal dari konfigurasi server/environment dan hard-stop yang sudah ada. Tidak ada paid fallback otomatis.</div>
+      <NewPanel title="Atur kebijakan & hard cap provider" fields={[
+        {name:"providerId",label:"Provider",type:"select",options:["workers-ai","groq","tavily","firecrawl","apify","scrapely"].map(x=>({value:x,label:x}))},
+        {name:"enabled",label:"Izinkan penggunaan provider",type:"checkbox",defaultValue:false},
+        {name:"allowPaidUsage",label:"Izinkan biaya berbayar (persetujuan owner)",type:"checkbox",defaultValue:false},
+        {name:"dailyUnitCap",label:"Cap unit harian",type:"number",defaultValue:0},
+        {name:"monthlyUnitCap",label:"Cap unit bulanan",type:"number",defaultValue:0},
+        {name:"dailyCostUsdMicros",label:"Cap biaya harian USD micros",type:"number",defaultValue:0},
+        {name:"monthlyCostUsdMicros",label:"Cap biaya bulanan USD micros",type:"number",defaultValue:0},
+        {name:"perRunCostUsdMicros",label:"Cap biaya per run USD micros",type:"number",defaultValue:0},
+        {name:"unitType",label:"Satuan",defaultValue:"requests"},
+        {name:"fallbackMode",label:"Mode saat kuota habis",type:"select",options:[{value:"stop",label:"Berhenti / defer (default)"},{value:"approved_account_pool",label:"Pool akun yang diotorisasi (belum diaktifkan di runtime)"}]}
+      ]} submit={(v)=>{const {providerId,...policy}=v;return patch(api,`/admin/provider-policies/${providerId}`,policy).then(()=>policies.refetch());}} />
+      <Section title="Kebijakan persisten" sub="Tersimpan di D1 dan diaudit. Hard enforcement pada jalur pemanggilan provider masih tahap berikutnya; jangan anggap perubahan cap sudah menghentikan seluruh request sampai runtime enforcement selesai.">
+        <Q q={policies}>{d=><Table rows={d.items} empty="Belum ada kebijakan eksplisit; runtime masih memakai konfigurasi environment saat ini" cols={[
+          {h:"Provider",r:(x:any)=><b>{x.provider_id}</b>},{h:"Aktif",r:(x:any)=><Badge v={x.enabled?"active":"paused"}/>},
+          {h:"Paid",r:(x:any)=><Badge v={x.allow_paid_usage?"warning":"disabled"}/>},
+          {h:"Cap unit H/B",r:(x:any)=>`${x.daily_unit_cap}/${x.monthly_unit_cap}`},
+          {h:"Cap biaya H/B",r:(x:any)=>`${usd(x.daily_cost_usd_micros)} / ${usd(x.monthly_cost_usd_micros)}`},
+          {h:"Fallback",r:(x:any)=>x.fallback_mode}
+        ]}/>}</Q>
+      </Section>
       <Section title="Provider registry" sub="Konfigurasi ditampilkan sebagai status saja; nilai secret tidak pernah dikirim ke browser.">
         <Q q={providers}>{(d) => <Table rows={d.providers} empty="Belum ada provider" cols={[
           { h: "Provider", r: (p: any) => <b>{p.id}</b> }, { h: "Layer", r: (p: any) => p.layer },
