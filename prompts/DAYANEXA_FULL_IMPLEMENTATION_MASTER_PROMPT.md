@@ -8,7 +8,7 @@ Implement the existing DAYANEXA codebase through V3 as specified in `docs/00-DAY
 
 Repository: `Sparkmind-obp-off/Dayanexa`; branch `main`; domain `dayanexa.biz.id`.
 
-Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, docs/27, current source, migrations, tests, CI and deployment configuration. Refresh the dated code audit against current HEAD before implementation.
+Read first: canonical master, docs/16, docs/17, docs/24, docs/25, docs/26, docs/27, current source, migrations, tests, local validation scripts and Wrangler deployment configuration. Refresh the dated code audit against current HEAD before implementation.
 
 ## Product and absolute rules
 
@@ -20,9 +20,9 @@ Do not restart/rewrite the repository. Do not merge with KAERVAX/KAEVOS. Preserv
 
 Clerk Production Google Sign-In only; no password, magic link or extra social provider unless owner changes the decision. Do not modify unrelated Clerk apps. Owner bootstrap uses verified Google identity and server-side allowlist, never client metadata.
 
-No secrets in source/browser/logs/prompts/Git. Keep .env.example; prohibit .env.production and .env.development. CI must never delete customer, contributor, payment, ledger, audit, D1, R2 or production data.
+No secrets in source/browser/logs/prompts/Git. Keep .env.example; prohibit .env.production and .env.development. Manual release and maintenance procedures must never delete customer, contributor, payment, ledger, audit, D1, R2 or production data.
 
-Production D1 migrations, secrets, provider activation, paid use, external account connection, external contact, public demo, live payment, refund, payout and deployment require explicit owner approval. No silent paid fallback, overage, top-up, subscription, proxy spend or billing-plan changes. Never rotate accounts to evade rate limits, 429, bans, suspension, trial/free-tier restrictions or terms. Unknown/stale quota, price, authorization or source permission fails closed. UI/CRUD/docs/mocks/old CI are not proof.
+Production D1 migrations, secrets, provider activation, paid use, external account connection, external contact, public demo, live payment, refund, payout and deployment require explicit owner approval. No silent paid fallback, overage, top-up, subscription, proxy spend or billing-plan changes. Never rotate accounts to evade rate limits, 429, bans, suspension, trial/free-tier restrictions or terms. Unknown/stale quota, price, authorization or source permission fails closed. UI/CRUD/docs/mocks/historical CI runs are not proof.
 
 ## System architecture
 
@@ -95,7 +95,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 ## Ordered implementation batches
 
-**Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, CI and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
+**Batch 0 — Fresh audit:** inspect exact current main HEAD, recursive tree, routes, services, adapters, migrations, workspaces, tests, local validation scripts and deployment. Refresh docs/24. Map requirements to existing code, gaps, tests and owner gates. Find every provider call site. No duplicate foundations.
 
 **Batch 1 — Identity/production integrity:** verify Clerk Google-only SDK, callback/domain, JWT, webhook secret presence, owner allowlist, tenant isolation, real browser sign-in/out/refresh, /api/v1/me and local validation. The frontend Vite build must resolve the public Clerk key using docs/27. Runtime Pages vars do not modify an already-built bundle. Build and scan a production artifact from the exact approved commit, record its checksum/provenance, deploy the build to the `dayanexa` Pages project manually with Wrangler following docs/28, then verify the served bundle and Google auth flow. Local checks alone are not deployment proof. No unrelated Clerk changes.
 
@@ -103,7 +103,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 **Batch 3 — Commercial/economic integrity:** immutable quotes, entitlement windows, payment signature/dedup/inquiry, ledger, tax/fees/revenue/cost/payable/settlement. Live money gated.
 
-**Batch 4 — Admin Control Center:** persistent customer/contributor/provider/account/Actor/policy/approval models and secure owner-only API/UI; Cloudflare/CI/backup health.
+**Batch 4 — Admin Control Center:** persistent customer/contributor/provider/account/Actor/policy/approval models and secure owner-only API/UI; Cloudflare/deployment/backup health.
 
 **Batch 5 — Provider Runtime Gateway:** additive schema, atomic reservations, adapters, quota snapshots, rate/concurrency/cost enforcement, reconciliation, circuit breaker, fail-closed behavior and compliant fallback. Prove no bypass.
 
@@ -121,7 +121,7 @@ One approved payment gateway pilot first. Faspay fail-closed until merchant chan
 
 ## Test and verification contract
 
-Use actual scripts from package.json. Deterministic mocks in ordinary CI; no external provider spend in routine CI. Test unit/integration/API auth/tenant isolation/lifecycle/idempotency/atomic quota reservation/race conditions/usage reconciliation/unknown charge/429/no paid fallback/account eligibility/secret redaction/payment ledger/artifact access.
+Use actual scripts from package.json. Use deterministic mocks in the normal test suite; tests must not trigger external provider spend by default. Test unit/integration/API auth/tenant isolation/lifecycle/idempotency/atomic quota reservation/race conditions/usage reconciliation/unknown charge/429/no paid fallback/account eligibility/secret redaction/payment ledger/artifact access.
 
 Prove disabled, unauthorized, stale or over-budget account is blocked before network dispatch. Prove concurrent reservations cannot overspend. Prove rate-limit, ban, suspension and terms denial never rotate accounts. Prove only compliant outage fallback works. Prove admin UI is enforced by API. Provider smoke must be opt-in, capped and owner-approved.
 
@@ -129,11 +129,11 @@ Before manual release, install from lockfile and run `npm run check`, `npm run a
 
 ## Definition of done
 
-Do not declare V3 complete until five engines run end-to-end; persistent clusters and validated demand exist; solution readiness is test-proven; agents execute scoped tools and durable tasks; a mission creates a tested private revocable demo; market consent/feedback links to demand; customer/contributor/operator/finance/owner journeys work; Admin Control Center is backed by secure APIs; all provider calls are quota/cost governed with compliant failover; economics reconcile; current HEAD CI passes; production auth/deployment parity, backup/restore, monitoring, legal/privacy and owner approvals are proven.
+Do not declare V3 complete until five engines run end-to-end; persistent clusters and validated demand exist; solution readiness is test-proven; agents execute scoped tools and durable tasks; a mission creates a tested private revocable demo; market consent/feedback links to demand; customer/contributor/operator/finance/owner journeys work; Admin Control Center is backed by secure APIs; all provider calls are quota/cost governed with compliant failover; economics reconcile; current HEAD local checks pass; production auth/deployment parity, backup/restore, monitoring, legal/privacy and owner approvals are proven.
 
 ## Reporting contract
 
-Every batch reports branch and exact HEAD; changed files/migrations; implemented versus reused paths; commands and exact test results; CI URL tied to commit; provider calls/account label/usage/cost; browser/production evidence; deployment state; pending defects and owner approvals; what was not tested; whether production D1, secrets, spend, outreach, live payment or deployment was touched.
+Every batch reports branch and exact HEAD; changed files/migrations; implemented versus reused paths; commands and exact test results; local check commands/results tied to source commit; provider calls/account label/usage/cost; browser/production evidence; deployment state; pending defects and owner approvals; what was not tested; whether production D1, secrets, spend, outreach, live payment or deployment was touched.
 
 Never claim success before evidence. Keep canonical master, audit, roadmap and prompt synchronized. Continue in small reviewable batches; do not stop after documentation.
 
