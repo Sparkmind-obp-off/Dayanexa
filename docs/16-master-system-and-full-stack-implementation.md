@@ -507,7 +507,7 @@ Work:
 - Capability Foundry tracks build/buy/license/integrate/partner/human routes with cost, lead time, ownership, maintenance and risk.
 - Durable mission orchestration: task dependencies, retries, idempotency, cancellation, pause/resume, deadline/SLA, human approval and compensation.
 - Quality gates, artifact versioning, private R2 access, malware/MIME/size checks, signed short-lived download links, acceptance, revision and dispute workflows.
-- Complete all 14 workspaces with live, permission-filtered APIs; add operational queues, notifications, support, audit explorer, economic ledger and owner dashboards.
+- Complete all 15 workspaces (14 role workspaces plus owner-only Admin & Resource Control Center) with live, permission-filtered APIs; add operational queues, notifications, support, audit explorer, economic ledger and owner dashboards.
 - Observability: structured traces, correlation IDs, provider cost, payment health, queue age, SLA breaches, error budget, backups/restore and incident runbooks.
 - Privacy and legal readiness: retention/deletion/export, consent, processor inventory, data subject requests, reviewed Terms/Privacy/refund/contributor terms and incident response.
 - Controlled pilot with a narrow customer segment and low execution budgets; measure Verified Economic Resolution, request-to-offer time, offer acceptance, paid conversion, delivery acceptance, dispute/refund rate, repeat purchase, contributor earnings actually paid, margin per mission, cost per outcome and customer retention.
@@ -675,3 +675,8 @@ Mandatory invariants:
 - Persist account-level quota snapshots, reservations, usage events, reconciliation, fallback decisions and audit events with provenance and idempotency.
 
 Do not mark this feature complete from a registry CRUD screen. Completion requires adapter call-site inventory, additive D1 schema, server-side gateway, atomic budget reservation, adapter integration, owner-only controls, cost reconciliation, observability and automated tests proving caps, fail-closed behavior, compliant fallback, no limit evasion and no paid use without approval. Production migrations, secret changes, provider activation and deployment remain owner-approval gated.
+
+
+## Mandatory execution contract
+
+The implementation, defect resolution and acceptance contract in `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` governs delivery. Every domain must be integrated through canonical state, server-authorized API, functional UI, audit, idempotency/recovery, cost attribution and automated tests. Do not mark a feature complete from CRUD or UI presence. Resolve defects with reproduction, root-cause analysis, regression test and verification. Work through all phases; keep owner-gated production actions separate from safe source implementation.
