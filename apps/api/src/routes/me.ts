@@ -120,8 +120,8 @@ me.get("/requests/:id", async (c) => {
     many<Record<string, unknown>>(d, `SELECT id,offer_id,provider,mode,merchant_order_id,amount,status,checkout_url,created_at,verified_at FROM payment_intents WHERE offer_id IN (${inList}) ORDER BY created_at DESC`, ...offerIds),
     many<Record<string, unknown>>(d, `SELECT m.id,m.offer_id,m.title,m.status,m.due_at,dl.status AS delivery_status FROM missions m LEFT JOIN deliveries dl ON dl.mission_id=m.id WHERE m.offer_id IN (${inList}) ORDER BY m.created_at DESC`, ...offerIds),
     many<Record<string, unknown>>(d, `SELECT id,number,kind,total_minor,status,mode,issued_at,paid_at FROM invoices WHERE offer_id IN (${inList}) ORDER BY issued_at DESC`, ...offerIds),
-    many<Record<string, unknown>>(d, "SELECT id,subject,status,staff_reply,created_at,replied_at FROM support_tickets WHERE related_type='demand' AND related_id=? ORDER BY created_at DESC", id),
-  ]) : [[], [], [], await many<Record<string, unknown>>(d, "SELECT id,subject,status,staff_reply,created_at,replied_at FROM support_tickets WHERE related_type='demand' AND related_id=? ORDER BY created_at DESC", id)];
+    many<Record<string, unknown>>(d, "SELECT id,subject,status,staff_reply,created_at,replied_at FROM support_tickets WHERE related_type='demand' AND related_id=? AND org_id=? ORDER BY created_at DESC", id, demand.org_id),
+  ]) : [[], [], [], await many<Record<string, unknown>>(d, "SELECT id,subject,status,staff_reply,created_at,replied_at FROM support_tickets WHERE related_type='demand' AND related_id=? AND org_id=? ORDER BY created_at DESC", id, demand.org_id)];
   const missionIds = missions.map((m) => m.id as string);
   const timeline = await many(d, `SELECT entity_type,entity_id,from_state,to_state,reason,created_at FROM lifecycle_transitions WHERE (entity_type='demand' AND entity_id=?)${missionIds.length ? ` OR (entity_type='mission' AND entity_id IN (${missionIds.map(() => "?").join(",")}))` : ""} ORDER BY created_at, rowid`, id, ...missionIds);
   const events = await many(d, `SELECT action,resource_type,resource_id,created_at FROM audit_events WHERE org_id=? AND resource_type IN ('offer','payment_intent') AND resource_id IN (${[...offerIds, ...payments.map((x) => x.id as string), "-"].map(() => "?").join(",")}) ORDER BY created_at, rowid`, demand.org_id, ...offerIds, ...payments.map((x) => x.id as string), "-");
@@ -153,6 +153,18 @@ me.get("/support", async (c) => c.json({ items: await many(D(c), "SELECT id,subj
 me.post("/support", async (c) => {
   const p = P(c), d = D(c);
   const input = await body(c, z.object({ subject: text(160, 3), body: text(4000, 10), relatedType: z.enum(["demand", "offer", "mission", "payment", "subscription", "other"]).optional().nullable(), relatedId: optText(60) }));
+  // A ticket may only reference a record the caller's organizations own.
+  if (input.relatedId && input.relatedType && input.relatedType !== "other") {
+    const ph = p.orgIds.map(() => "?").join(",");
+    const ownedSql: Record<string, string> = {
+      demand: `SELECT 1 AS x FROM demands WHERE id=? AND org_id IN (${ph})`,
+      offer: `SELECT 1 AS x FROM offers WHERE id=? AND customer_org_id IN (${ph}) AND status!='draft'`,
+      mission: `SELECT 1 AS x FROM missions WHERE id=? AND org_id IN (${ph})`,
+      payment: `SELECT 1 AS x FROM payment_intents WHERE id=? AND org_id IN (${ph})`,
+      subscription: `SELECT 1 AS x FROM subscriptions WHERE id=? AND org_id IN (${ph})`,
+    };
+    if (!(await one(d, ownedSql[input.relatedType], input.relatedId, ...p.orgIds))) fail(404, "RELATED_RECORD_NOT_FOUND");
+  }
   const id = newId("sup");
   await d.batch([
     d.prepare("INSERT INTO support_tickets (id,org_id,user_id,subject,body,related_type,related_id) VALUES (?,?,?,?,?,?,?)").bind(id, p.primaryOrgId, p.userId, input.subject, input.body, input.relatedType ?? null, input.relatedId),

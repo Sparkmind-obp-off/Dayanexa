@@ -27,7 +27,9 @@ function futureWithin(value: string | null | undefined, days: number, field: str
   if (!Number.isFinite(t) || t <= Date.now() || t > Date.now() + days * 86_400_000) fail(422, "INVALID_EXPIRY", `${field} wajib ISO di masa depan, maksimal ${days} hari.`);
   return new Date(t).toISOString();
 }
-providerAdmin.use("*", requirePermission("provider:admin"));
+// Scoped to /admin/* on purpose: this router is mounted at "/" next to other routers, and a "*"
+// middleware here would also gate every sibling router mounted after it (regression-tested).
+providerAdmin.use("/admin/*", requirePermission("provider:admin"));
 
 providerAdmin.get("/admin/provider-policies", async (c) => c.json({ items: await many(D(c), "SELECT * FROM provider_policies ORDER BY provider_id") }));
 providerAdmin.patch("/admin/provider-policies/:providerId", async (c) => {

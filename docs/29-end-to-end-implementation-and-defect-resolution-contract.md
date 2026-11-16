@@ -237,3 +237,14 @@ Every batch must report:
 10. whether production D1, secrets, spend, outreach, live payment or deployment was touched.
 
 Continue with the next safe implementation batch after reporting. Do not stop after producing a roadmap, master prompt or documentation update. Stop only at an explicit owner gate, unavailable required access, material ambiguity, or a verified phase boundary.
+
+## 14. Defect register
+
+Every defect closed under §8 is recorded here with its regression test and fixing commit.
+
+| ID | Found | Defect | Root cause | Regression test | Fixed in |
+|---|---|---|---|---|---|
+| D-001 | Phase 0 | Provider budget checks were check-then-act; concurrent calls could overspend caps | SUM-then-call, no atomic reservation | `tests/gateway.test.ts` › concurrent requests cannot overspend | 41ef2ec |
+| D-002 | Phase 0 | Provider policy/account/Actor registry persisted but not enforced at runtime | Routes called adapters directly | `tests/gateway.test.ts` › static scan; forged ticket | 41ef2ec |
+| D-003 | Phase 2 | Provider-admin owner gate (`use("*")`) also blocked every router mounted after it — commerce, billing, governance, metrics — for all non-owners: customers could not open billing or create payment intents, finance lost ledger access. Live in production deployment `97fef573` (41ef2ec) | A Hono sub-app's `*` middleware is merged into the parent route tree when the sub-app is mounted at `/` | `tests/isolation.test.ts` › regression: provider-admin middleware… | this batch |
+| D-004 | Phase 2 | A customer could open a support ticket whose `relatedId` pointed at another tenant's request; it then appeared in the victim's request detail (cross-tenant content injection) | `relatedId` not ownership-checked on create; detail query filtered by `related_id` only | `tests/isolation.test.ts` › Bob cannot attach a support ticket… | this batch |

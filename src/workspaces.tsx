@@ -594,7 +594,7 @@ export function AdminControl() {
       <Section title="Workers AI">
         <Q q={ai}>{(d) => <div className="grid g3"><Stat label="Provider default" value={d.status.defaultProvider} /><Stat label="Binding AI" value={d.status.workersAi.bindingPresent ? "Tersedia" : "Tidak ada"} /><Stat label="Panggilan hari ini" value={d.totals.calls_today ?? 0} /></div>}</Q>
       </Section>
-      <div className="alert warn small">CI aktif di .github/workflows/ci.yml. Status run, deployment commit, D1 backup/restore, R2 lifecycle, Queues dan Workflows belum ditarik ke dashboard; tidak ditampilkan sebagai PASS tanpa pemeriksaan nyata.</div>
+      <div className="alert warn small">GitHub Actions dinonaktifkan (ADR-0004); verifikasi rilis memakai npm run release:check lokal + deploy manual Wrangler. Status gate, deployment commit, D1 backup/restore, R2 lifecycle, Queues dan Workflows belum ditarik ke dashboard; tidak ditampilkan sebagai PASS tanpa pemeriksaan nyata.</div>
     </div>}
   </div>;
 }

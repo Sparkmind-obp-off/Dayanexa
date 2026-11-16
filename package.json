@@ -16,9 +16,11 @@
     "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
     "db:migrate:local": "wrangler d1 migrations apply dayanexa-production --local",
     "db:migrate:prod": "wrangler d1 migrations apply dayanexa-production --remote",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name dayanexa --branch main",
+    "deploy": "npm run release:check && wrangler pages deploy dist --project-name dayanexa --branch main --commit-hash $(git rev-parse HEAD)",
     "check": "npm run typecheck && npm test && npm run check:migrations && npm run check:secrets",
-    "audit": "npm audit --omit=dev --audit-level=high"
+    "audit": "npm audit --omit=dev --audit-level=high",
+    "release:check": "node scripts/release-check.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.33.9",
