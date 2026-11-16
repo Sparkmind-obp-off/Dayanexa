@@ -1,88 +1,54 @@
-# DAYANEXA — Agentic Opportunity & Execution OS
+# DAYANEXA — Demand-to-Execution OS
 
-Implementasi sesuai `docs/16-master-system-and-full-stack-implementation.md` (v2.0) dan `prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md`.
+**Product doctrine:** Discover demand. Build the capability. Deliver the outcome.
 
-## Stack
-- **Frontend**: React 18 + TypeScript + Vite, React Router, TanStack Query, Clerk React Core 3 (`@clerk/react` 6.18.0+; `@clerk/backend` compatible v2; Production, **Google-only**), lucide icons, design system gelap kustom.
-- **API**: Hono di Cloudflare Pages Functions (advanced mode, `dist/_worker.js`, `_routes.json` → `/api/*`).
-- **Data**: Cloudflare D1 (5 migrasi, 43 tabel, ledger double-entry immutable), R2 privat `dayanexa-private` untuk artefak (download bertanda tangan HMAC).
-- **AI**: Workers AI (`env.AI`) default — profil classification/extraction (Llama 3.1 8B fp8), reasoning/generation (Llama 3.3 70B fp8-fast), embeddings (bge-m3); budget neuron harian/bulanan, circuit breaker, validasi zod, `inference_traces`. Groq opsional, **nonaktif** default, tanpa fallback otomatis.
-- **Provider riset**: Tavily, Firecrawl, Apify, Scrape.ly — governor biaya (cap harian), SSRF guard, tanpa fallback berbayar.
-- **Pembayaran**: Duitku, Xendit, Midtrans, Faspay di balik satu antarmuka ternormalisasi; verifikasi webhook + rekonsiliasi status; refund/payout butuh approval; **live terkunci** (`PAYMENT_LIVE_ENABLED=false`, `PAYMENTS_MODE=mock`). Faspay fail-closed sampai kontrak merchant diverifikasi.
+Canonical architecture is now **V3 — Demand-to-Execution**. Start with:
+- [V3 Architecture](docs/18-demand-to-execution-architecture-v3.md)
+- [Demand Discovery Engine](docs/19-demand-discovery-engine.md)
+- [Demand Intelligence Engine](docs/20-demand-intelligence-engine.md)
+- [Capability & Solution Foundry](docs/21-capability-solution-foundry.md)
+- [Agentic Execution Engine](docs/22-agentic-execution-engine.md)
+- [Market Delivery Engine](docs/23-market-delivery-engine.md)
+- [Batch V2 Code Audit](docs/24-batch-v2-code-audit.md)
+- [V3 Roadmap](docs/17-master-upgrade-and-execution-roadmap.md)
+- [Master System](docs/16-master-system-and-full-stack-implementation.md)
+- [Master Implementation Prompt](prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md)
 
-## Fitur
-- **Publik**: Landing, Cara kerja, Harga (SaaS **Free / Pro / Plus** + paket layanan), Katalog, FAQ, Kontak, Legal (terms, privacy, refund, contributor terms), Sign-in/up Google.
-- **Customer journey**: dashboard, ajukan kebutuhan (kuota per plan, AI draft untuk Pro/Plus), daftar permintaan → terima penawaran → payment intent, detail misi (artefak, terima/sengketakan delivery), billing (upgrade/cancel), notifikasi.
-- **Contributor journey**: profil kontributor, tugas yang ditugaskan.
-- **14 workspace command center** (berbasis permission): Executive, Market Radar, Demand Intelligence, Opportunities, Solutions, Capabilities, Catalog, Agents, Execution, Commercial, Delivery, Ledger, Learning, Governance.
-- Authz milik DAYANEXA: role owner/operator/analyst/finance/contributor/member, isolasi tenant, separation of duties pada approval, audit append-only, rate limit, idempotency key.
+## V3 product flow
 
-## Paket
-| Plan | Harga/30 hari | Permintaan | AI assist | Seat |
-|---|---|---|---|---|
-| Free | Rp0 | 2 | 0 | 1 |
-| Pro | Rp149.000 | 10 | 50 | 3 |
-| Plus | Rp399.000 | 30 | 200 | 10 |
+Discovery Brief → real source runs and evidence → niche/demand clusters → validated demand → solution and capability plan → approved agentic mission → tested demo → lawful market presentation → accepted offer → verified payment/delivery/settlement → learning.
 
-Layanan (mulai dari): Demand Validation Rp750rb · Solution Sprint Rp3,5jt · Build & Deliver Rp9,5jt · Managed Ops Rp4,9jt/bln.
+The five engines are the product core. Customer, contributor, operator, identity, subscription, payment and ledger capabilities support that chain.
 
-## API utama (`/api/v1`)
-Publik: `GET /health`, `/config`, `/catalog`, `/plans`, `/artifacts/download`, webhooks `/webhooks/clerk`, `/webhooks/payments/:gateway`.
-Terautentikasi (Bearer Clerk): `/me`, `/notifications`, `/requests`, `/requests/ai-draft`, `/billing`, `/billing/subscribe`, `/billing/cancel`, intel (sources/signals/demands/opportunities…), ops (solutions/capabilities/missions/tasks/deliveries/artifacts…), commerce (offers/payments/refunds/payouts/ledger), governance (approvals/audit/providers/inference), metrics.
+## Current code foundation
 
-## Pengembangan
-Node.js minimal 20.9.0 (persyaratan Clerk Core 3).
+- React 18 + TypeScript + Vite; Hono API on Cloudflare Pages Functions.
+- Clerk Production Google-only integration using `@clerk/react` and compatible backend SDK.
+- Cloudflare D1, private R2 artifacts and Workers AI binding.
+- Tavily search, Firecrawl selected-page extraction, Apify/Scrape.ly Actor adapter with allowlist and cost cap.
+- Demand/signal/evidence/opportunity, solution/capability/gap, agent/mission/task, artifact/delivery, quote/payment/invoice/ledger foundations.
+- Current subscription hypotheses: Free Rp0, Pro Rp149.000/30 days, Plus Rp399.000/30 days. These are not market-validated. Keep provider credits and mission budgets separate.
+- Live payment remains disabled unless owner authorizes a verified merchant setup.
+
+## Audited baseline
+
+Batch V2 source audit: `main @ 04b4bbe4dd37fd2b4710bcab55e90cc42a0db6fa` (16 Nov 2026). The audit found real provider adapter paths and meaningful CRUD/lifecycle foundations, but no complete durable discovery job pipeline, persistent niche cluster engine, verified capability readiness system, actual agent/tool execution runtime, automated isolated demo build/preview pipeline or consent-aware market presentation lifecycle. See [audit](docs/24-batch-v2-code-audit.md).
+
+## Development
+
+Node.js >=20.9.0.
 ```bash
-npm install
-npm run build            # vite + bundle worker
-npm run typecheck && npm test && npm run check:migrations && npm run check:secrets
-pm2 start ecosystem.config.cjs   # wrangler pages dev dist :3000
+npm ci
+npm run ci
+npm run dev:web
 ```
-Secret lokal: salin `.dev.vars.example` → `.dev.vars`.
 
-## Deploy (Cloudflare BYOK)
-`npm run deploy` → Pages project `dayanexa`, branch `main`. Secret disimpan via `wrangler pages secret put` (tidak pernah di-commit).
+## Deployment and owner gates
 
-## Checklist aktivasi owner (wajib)
-1. **D1/R2/Workers AI**: resource dan binding pernah terdeteksi di Pages project; verifikasi kembali terhadap deployment aktif sebelum menyatakan sehat.
-2. **Clerk Production**: Google-only; pastikan custom domain, callback, publishable key, secret/JWT verification, authorized parties dan webhook `https://dayanexa.biz.id/api/v1/webhooks/clerk` + `CLERK_WEBHOOK_SECRET` benar. Real sign-in masih wajib diuji.
-3. **DNS/TLS**: `dayanexa.biz.id` dan `www.dayanexa.biz.id` tercantum pada konfigurasi Pages project saat pemeriksaan terakhir; tetap lakukan pemeriksaan DNS/TLS aktual. Jangan membuat record duplikat.
-4. **Cloudflare Pages source**: pada pemeriksaan API terakhir, `source` belum terhubung dan deployment terbaru tercatat sebagai ad-hoc. Hubungkan GitHub repo/branch `main` melalui dashboard atau gunakan jalur deployment resmi yang diotorisasi. Push GitHub belum otomatis berarti production ter-update.
-5. **Dependency lockfile/CI**: regenerasi dan commit `package-lock.json`; pastikan `.github/workflows/ci.yml` benar-benar ada dan workflow berjalan. `docs/ci/ci.workflow.yml` saja bukan CI aktif.
-6. **Pembayaran**: tetap `PAYMENTS_MODE=mock` dan `PAYMENT_LIVE_ENABLED=false`; uji sandbox terlebih dahulu. Live hanya setelah approval owner.
-7. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
-
-## V2 — status per fase (16 Nov 2026)
-
-### Fase 1 — Auth & integritas rilis
-- `@clerk/react` 6.18.x (Core 3) + `@clerk/backend` 2.33.9; paket lama `@clerk/clerk-react` tidak ada di dependency tree. `package-lock.json` di-commit; `npm ci` jadi reproducible.
-- Clerk Production terverifikasi lewat Frontend API publik: instance `production`, **hanya `oauth_google`** (password/email/passkey/web3 off). Kunci JWT yang tersimpan cocok dengan JWKS.
-- Server: Google-only ditegakkan saat provisioning, owner bootstrap hanya untuk email terverifikasi di allowlist, sekali saja, dan diaudit.
-- `npm audit --omit=dev`: 0 kerentanan (react-router-dom 7, zod 4).
-- Deploy: BYOK lewat wrangler (proyek Pages tanpa koneksi Git; setiap deploy dicatat dengan commit hash).
-
-### Fase 2 — Journey
-- **Pelanggan**: onboarding dengan persetujuan syarat/privasi berversi → draft request yang bisa disimpan dan dilanjutkan → tanda terima + SLA → detail request (ID, status, **aksi berikutnya + penanggung jawab**, linimasa, versi penawaran, pembayaran, invoice, misi, dukungan) → menyetujui **versi penawaran persis** (sidik SHA-256) → bayar → menerima/menyengketakan hasil → ekspor data / permintaan hapus.
-- **Kontributor**: daftar → diverifikasi → melihat kompensasi **sebelum** menerima → terima/tolak → kirim hasil → review/revisi → payable di ledger → payout disetujui → dibayar (dengan referensi transfer). Penghasilan hanya dihitung dari ledger.
-- **Operator**: `/app/queues` berisi 17 antrean (intake, bukti, penawaran, persetujuan, pengecualian pembayaran, dibayar-tanpa-misi, tugas terblokir/terkirim, QA, sengketa, refund, payout, dukungan, privasi, kontributor). Resolusi manual pembayaran memakai maker-checker.
-
-### Fase 3 — Monetisasi & integritas ekonomi
-- Satu window entitlement (periode langganan, atau siklus 30 hari bergulir untuk Free) dipakai **UI dan API**; tabel `usage_events` menggantikan hitungan bulan kalender. Kuota AI ditegakkan di server dan dihitung hanya saat sukses.
-- Penawaran berversi dan **immutable** (trigger DB) setelah diajukan; harga dari server; cek margin dengan pengecualian beralasan; versi lama otomatis tergantikan.
-- Invoice terpisah: `subscription` / `project` / `managed`. Ledger memisahkan pajak terutang, pendapatan langganan, pendapatan proyek, dan pendapatan managed; checkout bruto ≠ pendapatan.
-- Satu jalur `applyPaymentStatus` untuk webhook, rekonsiliasi, resolusi manual yang disetujui, dan simulator sandbox (simulator **dimatikan di produksi**, hanya untuk intent mock).
-- Tes integrasi menjalankan alur uang sandbox end-to-end di atas migrasi asli: penawaran → intent+invoice → pembayaran terverifikasi → penerimaan → pendapatan; pajak terpisah; ledger seimbang; idempotensi; event yang datang tidak berurutan diabaikan.
-- Pembayaran live tetap terkunci (`PAYMENTS_MODE=mock`, `PAYMENT_LIVE_ENABLED=false`).
-
-### Fase 4 — belum selesai (lihat checklist owner)
-Pilot terbatas, backup/restore D1, runbook insiden, review legal, benchmark Apify vs Scrape.ly, orkestrasi durable (Queues/Workflows).
-
-## Status (pemeriksaan 16 November 2026)
-- Clerk frontend source sudah dimigrasikan ke `@clerk/react` Core 3; login Google Production belum dibuktikan berhasil pada deployment aktif.
-- `package-lock.json` belum ada pada tree `main` saat pemeriksaan; regenerasi dengan clean install dan commit sebelum CI.
-- Cloudflare Pages project memuat custom domains, tetapi API project terakhir menunjukkan Git `source` belum terhubung; deployment terakhir adalah ad-hoc dan menggunakan commit lama.
-- D1 (5 migrasi), Workers AI dan R2 pernah terdeteksi terikat pada konfigurasi deployment; verifikasi ulang pada release terbaru.
-- CI workflow berada di `docs/ci/ci.workflow.yml`; belum boleh dianggap aktif sampai file workflow berada di `.github/workflows/` dan ada run sukses.
-- Payment mode masih mock; gateway sandbox/live, webhook Clerk, payout dan keseluruhan journey belum terverifikasi end-to-end.
-- Dokumen legal masih memerlukan tinjauan hukum sebelum operasi komersial publik.
-- Terakhir diperbarui: 2026-11-16
+- Cloudflare BYOK deployment is a separate action from a Git push; verify deployed commit/build ID.
+- Verify Google sign-in and authenticated browser journeys; source code alone is not proof.
+- Confirm actual GitHub Actions workflow exists under `.github/workflows/` and has a successful run.
+- Verify Clerk webhook secret in Cloudflare; never paste secret values into chat.
+- Keep payment mode mock and live payment disabled until sandbox, webhook, reconciliation and owner approval.
+- No production D1 migration, paid Actor, provider spend beyond approved caps, external outreach, public demo deployment, refund or payout without explicit approval.
+- Respect source permissions, platform terms, privacy, copyright and opt-out requirements.

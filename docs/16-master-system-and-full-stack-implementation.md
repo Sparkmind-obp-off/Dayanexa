@@ -1,4 +1,6 @@
-# DAYANEXA — Master System & Full-Stack Implementation Specification
+# DAYANEXA V3 — Master System & Full-Stack Implementation Specification
+
+**Version:** 3.0 · **Canonical architecture:** Demand-to-Execution · **Updated:** 16 November 2026
 
 **Document type:** Canonical implementation contract  
 **Version:** 2.0  
@@ -578,3 +580,73 @@ For each external dependency, report exact required owner action and the evidenc
 - Workers AI remains default inference; Groq remains optional and disabled.
 - Existing Free/Pro/Plus and service starting prices remain hypotheses to test, not guaranteed revenue.
 - No paid provider usage, live payment, payout, refund, DNS mutation, production secret rotation or production deployment without the relevant explicit owner authorization.
+
+
+---
+
+# V3 — Demand-to-Execution Architecture (canonical upgrade)
+
+**Current version:** 3.0  
+**Date:** 16 November 2026  
+**Audited Batch V2 baseline:** `04b4bbe4dd37fd2b4710bcab55e90cc42a0db6fa`  
+**V3 authority:** `docs/18-demand-to-execution-architecture-v3.md`
+
+> This section supersedes V2 operating phases and any earlier wording that treats the dashboard, provider adapter, agent registry, task assignment or payment surface as the primary product outcome. The earlier V2 sections remain useful implementation history and reusable constraints.
+
+## 20. Product center: five Demand-to-Execution engines
+
+DAYANEXA's primary product is the connected five-engine chain:
+
+1. Demand Discovery Engine — real permitted search and collection, source/Actor registry, discovery briefs/jobs/history, provenance and bounded spend.
+2. Demand Intelligence Engine — normalization, deduplication, niche clustering, supporting/contradicting evidence, transparent assessment and validation.
+3. Capability & Solution Foundry — demand-traceable solution specification and capability formation through reuse, compose, build, acquire/license, integrate, partner, contributor, defer or reject.
+4. Agentic Execution Engine — approved mission/task orchestration, real scoped agent/tool invocation, human escalation, budget reservation, durable retries, artifact generation, testing and demo preview.
+5. Market Delivery Engine — traceable demo presentation, consent/approval, feedback, immutable offer, acceptance, verified payment, delivery, settlement and learning.
+
+The canonical flow is DiscoveryBrief → DiscoveryJob/SourceRun → Signal → DemandCluster → Demand hypothesis/evidence/assessment → validated Demand → Opportunity → SolutionSpec → CapabilityPlan → approved Mission/Tasks → AgentRun/ToolInvocation/Contributor work → Artifact/TestReport/Demo → MarketPresentation/Feedback → Offer/Acceptance → Payment/Delivery/Settlement → LearningRecord.
+
+## 21. V3 canonical records and events
+
+Add the V3 entities defined in `docs/18-demand-to-execution-architecture-v3.md`: DiscoveryBrief, DiscoveryJob, SourceRun, ActorDefinition, DemandCluster, DemandAssessment, SolutionSpec, CapabilityPlan, AgentRun, ToolInvocation, Demo and MarketPresentation. Implement only through additive, reviewed migrations. Preserve source snapshots, versioning, provenance, costs, approvals and retention. Do not modify production D1 without explicit owner approval.
+
+## 22. Source/provider and Actor architecture
+
+Provider adapters are replaceable and are not canonical state. Tavily is search/discovery; Firecrawl is selected-page extraction; Apify OR Scrape.ly is specialized collection selected by source/task benchmark. Threads support must be verified against the actual official/authorized connector or Actor, its current input/output schema, public coverage, history/pagination and platform terms. Never claim support based only on provider brand.
+
+The Actor Registry must hold reviewed Actor version, README/schema, source coverage, required inputs, output mapping, pricing, cost cap, terms, risk, benchmark and owner approval. The UI must render the approved schema rather than send an empty input object. Persist stable idempotency keys and run history. No automatic paid fallback or top-up.
+
+## 23. Demand evidence and validation
+
+Signals are observations, not demand. AI classification and cluster membership are inference. A demand becomes validated only under a versioned policy that checks source independence, evidence quality, contradictions, recency and a human/first-party validation method appropriate to the claim. Likes, views, search volume and duplicate posts do not prove buying intent. Opportunity creation requires validated demand or a separately audited exception.
+
+## 24. Solution and capability formation
+
+A SolutionSpec must map each deliverable to the demand evidence and a measurable acceptance criterion. Every capability gap must have a documented resolution route, cost, risk, owner, dependency and readiness test. A capability record or "ready" toggle alone is not readiness proof. Paid acquisition, licensing, external contracts and partner commitments require explicit approval.
+
+## 25. Agentic execution contract
+
+Agent profiles are not execution engines. Implement a Tool Registry, AgentRun, ToolInvocation, task schemas, scoped authorization, atomic budget reservation, idempotency, durable orchestration, retries, output validation, audit and human escalation. DAYANEXA owns the canonical workflow. Prefer Cloudflare-native Queues/Workflows when durable execution is needed; optional orchestration frameworks require an ADR and measured need. No agent can grant itself permissions or approve its own external/financial action.
+
+Website/application demos must be built in an isolated preview environment, tested, scanned for secrets and dependencies, linked to source commit/build hash and demand, and published through short-lived revocable preview access. Production deployment requires approval.
+
+## 26. Market delivery and economic proof
+
+A demo must trace to validated demand, SolutionSpec, mission, build and test evidence. Showing a demo is not customer acceptance. A public post does not grant marketing consent. Outreach requires a documented lawful/consented basis, platform compliance, human approval and opt-out suppression. Offer acceptance binds to the exact immutable quote version. Payment verification, delivery acceptance, revenue recognition, contributor payable and payout remain separate reconciled states.
+
+## 27. Account tiers, entitlements and provider consumption
+
+Clerk Production Google-only remains the identity path. The current Free/Pro/Plus subscription hypotheses remain distinct from search credits, extraction credits, Actor usage and execution budgets. Enforce entitlements server-side before every metered action. Free means bounded verified free allowance, not an unlimited provider promise. No silent overage, auto top-up, paid fallback or unapproved Business tier. Do not change prices or live entitlements as part of V3 architecture documentation.
+
+## 28. V3 release gates and canonical documents
+
+The five engine specifications, Batch V2 audit and roadmap are:
+- `docs/18-demand-to-execution-architecture-v3.md`
+- `docs/19-demand-discovery-engine.md`
+- `docs/20-demand-intelligence-engine.md`
+- `docs/21-capability-solution-foundry.md`
+- `docs/22-agentic-execution-engine.md`
+- `docs/23-market-delivery-engine.md`
+- `docs/24-batch-v2-code-audit.md`
+- `docs/17-master-upgrade-and-execution-roadmap.md`
+
+V3 is complete only when each engine passes its own code, schema, UI, permission, test, observability and acceptance gates. A provider adapter, CRUD screen, task assignment, mock payment or generated text is not proof of a completed engine.

@@ -1,4 +1,6 @@
-# DAYANEXA — Master System / Full-Stack Implementation Prompt
+# DAYANEXA V3 — Master System / Full-Stack Implementation Prompt
+
+**Version:** 3.0 · Demand-to-Execution Architecture
 
 **Version:** 2.0 · **Updated:** 16 November 2026
 
@@ -172,3 +174,71 @@ Begin by auditing the current repository against the V2 master specification. Co
 - Gross payment is not recognized platform revenue. Keep gateway fees, taxes, refunds, provider costs, human compensation, platform revenue, margin and payout liabilities separate.
 - Use Asia/Jakarta for customer-visible dates and IDR whole-rupiah amounts; store canonical timestamps in UTC.
 - Genspark is not a dependency and must not be invoked or assumed available.
+
+
+---
+
+# V3 OVERRIDE — Demand-to-Execution Architecture
+
+This V3 section is authoritative over the earlier V2 phase ordering. Implement the five canonical engines in order and preserve V2 foundations where they pass audit.
+
+## Mission
+
+Build DAYANEXA as a real Demand-to-Execution OS:
+1. Demand Discovery Engine.
+2. Demand Intelligence Engine.
+3. Capability & Solution Foundry.
+4. Agentic Execution Engine.
+5. Market Delivery Engine.
+
+Read before coding:
+- `docs/18-demand-to-execution-architecture-v3.md`
+- `docs/19-demand-discovery-engine.md`
+- `docs/20-demand-intelligence-engine.md`
+- `docs/21-capability-solution-foundry.md`
+- `docs/22-agentic-execution-engine.md`
+- `docs/23-market-delivery-engine.md`
+- `docs/24-batch-v2-code-audit.md`
+- `docs/17-master-upgrade-and-execution-roadmap.md`
+
+## Mandatory first action: audit the actual repository
+
+Pin the current branch and HEAD. Inspect package scripts, migrations, API routes, provider adapters, frontend forms, permissions, tests, Wrangler config and deployed commit. Map every V3 requirement to exact file/schema/route/UI/test. Re-run checks in a real repository environment. Do not rely on this audit as proof of current tests. Do not overwrite working V2 code or perform production migrations as part of a source audit.
+
+## Engine 1 — real Demand Discovery
+
+Implement user-defined Discovery Briefs, durable discovery jobs/history, source registry, permission/terms records, versioned Actor Registry and schema-driven Actor inputs. Use Tavily for search, Firecrawl for selected public page extraction and Apify OR Scrape.ly for a reviewed specialized source. Verify Threads support before enabling it. Record original URLs/IDs, published/observed/captured timestamps, content hashes, provider/actor version, run ID, credits, actual cost, retention and deduplication. Use stable idempotency, quotas, retries, cancellation and partial-failure state. Do not send a hardcoded empty Actor input object when the Actor schema requires fields.
+
+## Engine 2 — demand intelligence
+
+Implement signal normalization, exact/near duplicate detection, niche/sub-niche taxonomy, persistent DemandCluster and membership history, problem/outcome extraction, supporting and contradicting evidence, source independence, recency, urgency and intent evidence. Keep scoring dimensions separate and version the rubric. AI suggestions require provenance and human review. A public signal, like, view or repeated copy is not validated demand. Validation must have evidence, rationale and an appropriate confirmation method.
+
+## Engine 3 — capability and solution foundry
+
+Create a versioned SolutionSpec mapped to validated demand and acceptance criteria. Record capability gaps and resolution route (reuse, compose, build, acquire/license, integrate, partner, contributor, defer, reject), cost, risk, dependencies, owner and test evidence. A capability cannot become ready from a CRUD status change alone. External spend, license, contract or partner commitment requires explicit owner approval.
+
+## Engine 4 — real agentic execution
+
+Agent records are inventory, not runtime. Build a scoped Tool Registry and actual AgentRun/ToolInvocation system. Enforce least privilege independent of model prompts. Persist mission/task state, input/output schemas, attempt, idempotency, budget reservation, usage/cost, timeout, retry and human escalation. Use durable Cloudflare-native workflow primitives where needed; do not add frameworks without ADR. Build artifacts in an isolated preview environment, run tests/security/secret checks, record commit/build hash and create revocable preview URLs. No public production deployment without approval.
+
+## Engine 5 — market delivery
+
+Link each demo to the originating demand, evidence, solution version, mission, build and test report. Record who was shown what, when, under what lawful/consented basis, with human approval and opt-out handling. Never infer consent to contact from a public post. Preserve immutable versioned quotes, explicit acceptance, verified payment, delivery acceptance, disputes/refunds, contributor settlement and economic reconciliation. Demo views are not revenue or customer acceptance.
+
+## Account and cost policy
+
+Clerk Production Google-only remains mandatory. Keep account subscription entitlements separate from provider/search/Actor credits and mission execution budgets. Free tier uses only bounded verified free allowances. No paid fallback, auto top-up, overage, paid Actor run or external purchase without explicit approval. No new paid tier or pricing change without owner approval.
+
+## Execution sequence and gates
+
+- V3-A: baseline/CI/deployment integrity and discovery reliability.
+- V3-B: demand clustering, scoring and validation.
+- V3-C: SolutionSpec and capability readiness.
+- V3-D: actual agent/tool runtime and working tested demo.
+- V3-E: market presentation, acceptance and verified economics.
+
+For each batch, implement code + migration + API + UI + permissions + tests + observability + runbook. Additive migrations only. Production D1 migration, secrets, provider activation, live payments, refunds, payouts, outbound contact and production deployment require explicit owner approval. Do not claim a gate passes without its evidence.
+
+## Required report
+
+State exact commit, changed files, schema/routes/UI, commands run, test counts, provider source and actual cost, browser/deployment proof, owner actions and remaining gaps. Distinguish source implementation, unit/integration tests, sandbox, production smoke and real customer validation.
