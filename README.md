@@ -1,6 +1,6 @@
 # DAYANEXA — Agentic Opportunity & Execution OS
 
-Implementasi sesuai `docs/16-master-system-and-full-stack-implementation.md` (v1.1) dan `prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md`.
+Implementasi sesuai `docs/16-master-system-and-full-stack-implementation.md` (v2.0) dan `prompts/DAYANEXA_MASTER_IMPLEMENTATION_PROMPT.md`.
 
 ## Stack
 - **Frontend**: React 18 + TypeScript + Vite, React Router, TanStack Query, Clerk React Core 3 (`@clerk/react` 6.18.0+; `@clerk/backend` compatible v2; Production, **Google-only**), lucide icons, design system gelap kustom.
@@ -44,15 +44,20 @@ Secret lokal: salin `.dev.vars.example` → `.dev.vars`.
 `npm run deploy` → Pages project `dayanexa`, branch `main`. Secret disimpan via `wrangler pages secret put` (tidak pernah di-commit).
 
 ## Checklist aktivasi owner (wajib)
-1. **D1**: ✅ `dayanexa-production` (40ba9edb-…) sudah dibuat, 5 migrasi remote sudah diterapkan, binding `DB` aktif.
-2. **Clerk**: pastikan hanya Google yang aktif di dashboard Clerk Production; buat webhook ke `https://dayanexa.biz.id/api/v1/webhooks/clerk` dan set `CLERK_WEBHOOK_SECRET`.
-3. **DNS** (WAJIB, owner): token Cloudflare tidak punya izin DNS. Di dashboard Cloudflare zone `dayanexa.biz.id` tambahkan CNAME `@` → `dayanexa.pages.dev` dan CNAME `www` → `dayanexa.pages.dev` (proxied). Domain sudah ditambahkan ke Pages project dan menunggu CNAME ini. Login Clerk Production hanya berfungsi di `dayanexa.biz.id`.
-4. **Pembayaran**: isi kredensial sandbox merchant; live hanya setelah approval owner (`PAYMENT_LIVE_ENABLED=true`, `PAYMENTS_MODE=live`).
-5. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
+1. **D1/R2/Workers AI**: resource dan binding pernah terdeteksi di Pages project; verifikasi kembali terhadap deployment aktif sebelum menyatakan sehat.
+2. **Clerk Production**: Google-only; pastikan custom domain, callback, publishable key, secret/JWT verification, authorized parties dan webhook `https://dayanexa.biz.id/api/v1/webhooks/clerk` + `CLERK_WEBHOOK_SECRET` benar. Real sign-in masih wajib diuji.
+3. **DNS/TLS**: `dayanexa.biz.id` dan `www.dayanexa.biz.id` tercantum pada konfigurasi Pages project saat pemeriksaan terakhir; tetap lakukan pemeriksaan DNS/TLS aktual. Jangan membuat record duplikat.
+4. **Cloudflare Pages source**: pada pemeriksaan API terakhir, `source` belum terhubung dan deployment terbaru tercatat sebagai ad-hoc. Hubungkan GitHub repo/branch `main` melalui dashboard atau gunakan jalur deployment resmi yang diotorisasi. Push GitHub belum otomatis berarti production ter-update.
+5. **Dependency lockfile/CI**: regenerasi dan commit `package-lock.json`; pastikan `.github/workflows/ci.yml` benar-benar ada dan workflow berjalan. `docs/ci/ci.workflow.yml` saja bukan CI aktif.
+6. **Pembayaran**: tetap `PAYMENTS_MODE=mock` dan `PAYMENT_LIVE_ENABLED=false`; uji sandbox terlebih dahulu. Live hanya setelah approval owner.
+7. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
 
-## Status
-- Clerk SDK migration: Core 3 (`@clerk/react` 6.18.0+; `@clerk/backend` compatible v2); production sign-in smoke test required after deployment.
-- CI workflow siap di `docs/ci/ci.workflow.yml` (salin ke `.github/workflows/ci.yml` — GitHub App belum punya izin `workflows`).
-- Typecheck ✅ · 18 unit test ✅ · migrasi ✅ · secret scan ✅ · build ✅
-- Production: https://dayanexa.pages.dev (D1 ✅, Workers AI ✅, R2 ✅, Clerk keys ✅)
+## Status (pemeriksaan 16 November 2026)
+- Clerk frontend source sudah dimigrasikan ke `@clerk/react` Core 3; login Google Production belum dibuktikan berhasil pada deployment aktif.
+- `package-lock.json` belum ada pada tree `main` saat pemeriksaan; regenerasi dengan clean install dan commit sebelum CI.
+- Cloudflare Pages project memuat custom domains, tetapi API project terakhir menunjukkan Git `source` belum terhubung; deployment terakhir adalah ad-hoc dan menggunakan commit lama.
+- D1 (5 migrasi), Workers AI dan R2 pernah terdeteksi terikat pada konfigurasi deployment; verifikasi ulang pada release terbaru.
+- CI workflow berada di `docs/ci/ci.workflow.yml`; belum boleh dianggap aktif sampai file workflow berada di `.github/workflows/` dan ada run sukses.
+- Payment mode masih mock; gateway sandbox/live, webhook Clerk, payout dan keseluruhan journey belum terverifikasi end-to-end.
+- Dokumen legal masih memerlukan tinjauan hukum sebelum operasi komersial publik.
 - Terakhir diperbarui: 2026-11-16

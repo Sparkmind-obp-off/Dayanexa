@@ -1,6 +1,6 @@
 # DAYANEXA — Master System / Full-Stack Implementation Prompt
 
-**Version:** 1.2 · **Updated:** 16 November 2026
+**Version:** 2.0 · **Updated:** 16 November 2026
 
 **Inference decision:** Cloudflare Workers AI via `env.AI` is the default; GroqCloud is optional and disabled by default.
 
@@ -33,6 +33,50 @@ DAYANEXA doctrine: **Discover demand. Build the capability. Deliver the outcome.
 - Payment gateway registry: Duitku, Xendit, Midtrans and Faspay behind one normalized adapter interface.
 - Economics: payment events, reconciliation, refunds/disputes, balanced double-entry ledger, costs, revenue, margin and settlement liability.
 - CI: frontend and API checks, tests, migration validation, adapter fixtures, secret scanning, dependency audit and deployment smoke tests.
+
+## V2 mandatory delivery order — four gated phases
+
+The canonical implementation contract is now V2.0. Follow exactly these four phases and do not jump ahead.
+
+### Phase 1 — Clerk Production authentication and release integrity
+- Audit and finish the `@clerk/react` Core 3 migration; keep compatible `@clerk/backend` v2; regenerate/commit the missing lockfile and prove clean install.
+- Verify Google-only Clerk Production, canonical custom domain, frontend API, OAuth redirect/callback URLs, publishable/secret/JWT verification configuration, authorized parties, session claims and signed webhook.
+- Verify owner bootstrap is restricted to a verified Google identity on the configured allowlist, one-time and audited.
+- Inspect actual Cloudflare Pages source/deployment state. The latest inspected project has no Git source connection and the last deployment was ad-hoc; pushing GitHub alone does not prove production updated.
+- Repair authorized GitHub–Pages connection or implement a reproducible, owner-authorized deployment process. Do not bypass account permissions.
+- Add/repair CI and run clean install, typecheck, tests, migrations, secret scan, dependency audit, build and deploy smoke tests.
+- Test Google sign-up/sign-in/sign-out/refresh, `/api/v1/me`, expired sessions, unauthorized access, role and tenant isolation.
+**Gate:** new Clerk SDK is actually deployed to `dayanexa.biz.id`; real Google auth and protected API pass.
+
+### Phase 2 — End-to-end customer, contributor and operator journeys
+Implement and test the full visitor → Google auth → onboarding → organization → request → evidence validation → versioned quote → explicit acceptance → checkout → verified payment → mission → delivery → acceptance/revision/dispute → closure path.
+- Customer must see request ID, status, next action, timeline, quote details, payment status, artifacts and support.
+- Contributor must apply, be verified, see eligible paid task scope/compensation, accept, submit, pass quality review and see payable/payout reconciliation.
+- Operator must process intake, evidence, quotes, approvals, payment exceptions, mission blockers, delivery, disputes, refunds and payouts through permissioned queues.
+- Add notification event model, save/resume, accessible responsive states, support, privacy consent and export/delete requests.
+**Gate:** one real test customer journey, one test contributor journey and one operator exception journey pass in non-production with auditable state transitions.
+
+### Phase 3 — Layered monetization and economic integrity
+Implement five clearly separated monetization layers:
+A. SaaS access plans (Free Rp0, Pro Rp149.000/30 days, Plus Rp399.000/30 days; existing working hypotheses).
+B. One-time service/project offers (Demand Validation from Rp750.000, Solution Sprint from Rp3.500.000, Build & Deliver from Rp9.500.000).
+C. Managed Operations from Rp4.900.000/month, only with a scoped recurring contract.
+D. Metered add-ons/credits/seats/priority only after published price, cap and explicit customer confirmation.
+E. Partner/marketplace commission/split settlement only after legal, KYC, gateway and fund-flow eligibility; disabled in MVP.
+- Clearly state subscription buys platform access/quotas, not project execution unless the quote includes it.
+- Preserve no-auto-renewal behavior unless a later owner-approved, legally reviewed opt-in is implemented.
+- Resolve calendar-month vs 30-day period mismatch; enforce AI quota in API, not only UI.
+- Separate subscription invoices from project quotes and payment intents.
+- Validate all four gateway adapters with official merchant docs and sandbox fixtures, but select one approved gateway for initial controlled pilot.
+- Implement immutable versioned quotes, server-authoritative prices, idempotent payment intents, webhook verification, reconciliation, refunds, disputes, balanced double-entry ledger, fees, taxes, costs, revenue, margin and contributor liabilities.
+**Gate:** sandbox money flow reconciles end-to-end; no live payment, refund or payout without owner approval; plan quotas and unit economics are demonstrably correct.
+
+### Phase 4 — Complete operating OS, intelligence and controlled pilot
+- Finish demand evidence, source provenance, capability formation, agent/human orchestration, mission durability, quality/delivery and artifact security.
+- Finish all 14 permissioned command-center workspaces, notifications, support, economic ledger, governance and audit.
+- Implement observability, provider cost governor, backups/restore, retention/deletion, incident response and legal review.
+- Run a limited pilot and measure Verified Economic Resolution, paid conversion, quote acceptance, delivery acceptance, disputes/refunds, contribution margin, cost per outcome, repeat purchase and contributor payouts actually paid.
+**Gate:** repeated accepted and paid outcomes with reconciled positive unit economics and safe operations; owner go/no-go before wider launch.
 
 ## Execution protocol
 1. **Audit first.** Inspect repository and CI. List verified facts, defects, gaps, security risks, duplicated code and assumptions. Do not overwrite valid work.
@@ -113,4 +157,16 @@ You may write code, tests, migrations, docs and non-production configuration. Yo
 5. Required owner actions, if any.
 6. Next phase and acceptance gate.
 
-Begin by auditing the current repository against the master specification. Confirm whether the API Worker has a valid `env.AI` binding; add it only after inspecting the actual Wrangler config and deployment shape. Implement and test the Workers AI primary adapter before treating Groq as an option. Then execute the highest-priority implementation batch without changing production state or incurring paid spend.
+Begin by auditing the current repository against the V2 master specification. Confirm whether the API Worker has a valid `env.AI` binding; add it only after inspecting the actual Wrangler config and deployment shape. Implement and test the Workers AI primary adapter before treating Groq as an option. Then execute the highest-priority implementation batch without changing production state or incurring paid spend.
+
+
+## V2 customer journey and monetization invariants
+- A demand request is not an order; an offer is not accepted until the customer accepts its exact version; a redirect is not payment proof; delivery is not accepted until explicit acceptance or a documented policy outcome.
+- A customer order must snapshot scope, price, currency, tax, payment schedule, delivery, acceptance, revisions, refund/dispute and quote expiry.
+- Customer subscription entitlement and project execution charges are separate products and ledger entries.
+- Existing SaaS prices are hypotheses: Free Rp0, Pro Rp149.000/30 days, Plus Rp399.000/30 days. Existing service starting prices are Demand Validation Rp750.000, Solution Sprint Rp3.500.000, Build & Deliver Rp9.500.000, Managed Operations Rp4.900.000/month. Final customer price comes only from an accepted server-generated quote.
+- No silent auto-renewal, overage, top-up, paid AI fallback, or unapproved marketplace fee.
+- Contributor compensation must be visible before task acceptance; a payable, approval, transfer and reconciled paid state are distinct.
+- Gross payment is not recognized platform revenue. Keep gateway fees, taxes, refunds, provider costs, human compensation, platform revenue, margin and payout liabilities separate.
+- Use Asia/Jakarta for customer-visible dates and IDR whole-rupiah amounts; store canonical timestamps in UTC.
+- Genspark is not a dependency and must not be invoked or assumed available.

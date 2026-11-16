@@ -1,9 +1,9 @@
 # DAYANEXA — Master System & Full-Stack Implementation Specification
 
 **Document type:** Canonical implementation contract  
-**Version:** 1.2  
+**Version:** 2.0  
 **Date:** 16 November 2026  
-**Status:** Approved architectural direction; implementation and production activation remain gated  
+**Status:** V2 canonical execution contract; implementation and production activation remain gated  
 **Repository:** `Sparkmind-obp-off/Dayanexa` · `main`  
 **Product:** Agentic Opportunity & Execution OS
 
@@ -365,7 +365,153 @@ Initial cost doctrine:
 
 Apify vs Scrape.ly must be selected through a source-specific benchmark: coverage, freshness, completeness, success rate, price per accepted evidence, legal permissions and operational reliability. Tavily search and Firecrawl extraction are complementary, not interchangeable. Workers AI is inference, not workflow orchestration. Cloudflare Workers AI's daily free allocation, rate limits, model catalog and per-model pricing can change; check current Cloudflare documentation and the actual account dashboard before activating models. Local Wrangler inference also consumes account allocation. GroqCloud remains optional and disabled by default; never silently route to a paid model or Unified Billing.
 
-## 14. Build phases and exit gates
+## 14. V2 operating model — four gated delivery phases
+
+DAYANEXA V2 is executed in four ordered phases. Do not skip an earlier gate because a later screen exists. The phases intentionally combine related work so that identity, customer value, monetization and operating control become one coherent product.
+
+### Phase 1 — Identity, access and production release integrity
+**Objective:** every legitimate user can enter securely and every protected action is authorized.
+
+Work:
+- Complete the migration from deprecated `@clerk/clerk-react` to `@clerk/react` Core 3, keep a compatible `@clerk/backend` v2 line, regenerate and commit the package lockfile, and run a clean install from that lockfile.
+- Verify the exact Clerk Production instance, publishable key, secret key, JWT verification key/JWKS strategy, Frontend API/custom domain, Google OAuth redirect URLs, authorized parties, session token claims and webhook signing secret.
+- Google is the only enabled social provider. No email/password, magic link or other social provider is to be introduced without an explicit owner decision.
+- Confirm the canonical host is `https://dayanexa.biz.id`; `www` behavior must be deliberate and consistent. Verify DNS, TLS, Clerk domain and redirect allowlists independently; a domain merely appearing in Pages configuration is not proof of DNS/TLS health.
+- Repair Cloudflare Pages source integration or document a repeatable, authenticated deployment path. Current account inspection showed the Pages project has no source connection and its latest deployment is an ad-hoc build; do not assume a push to GitHub publishes production.
+- Correct CI so clean install, typecheck, tests, migration checks, secret scan, dependency audit and production build run against the committed lockfile. CI workflow installation requires GitHub Actions permission; do not claim it exists while it is only in `docs/ci`.
+- Test sign-up, sign-in, sign-out, refresh, expired/revoked session, protected `/api/v1/me`, Google-only enforcement, owner bootstrap and role/tenant isolation.
+- Review owner bootstrap: only a verified Google identity matching the explicitly configured owner allowlist may receive initial owner access; bootstrap must be one-time, auditable, and must not allow self-promotion through client metadata.
+- Verify Clerk webhook signature, event deduplication, user update/deletion/suspension handling and safe replay.
+
+**Exit gate:** a clean production deployment serves the new SDK bundle on the canonical domain; a real Google sign-in obtains a valid session; the Worker accepts the session and returns the correct internal principal from `/me`; all authorization and isolation tests pass. Until then, authentication is not production-ready.
+
+### Phase 2 — Complete customer, contributor and operator journeys
+**Objective:** a user can move from first visit to a clearly understood, completed outcome without dead ends.
+
+Customer journey (canonical):
+1. Public discovery: understand DAYANEXA, trust boundaries, examples that are real, service catalog, pricing, FAQ, policies and support.
+2. Account entry: Google sign-in; explicit terms/privacy acknowledgement; verified email; onboarding and profile completion.
+3. Workspace setup: create or join an organization, choose customer intent, capture industry/context and notification preferences.
+4. Demand submission: structured problem, current process, desired outcome, urgency, constraints, budget indication (optional), attachments and consent. Save draft and resume.
+5. Intake triage: confirmation receipt, request ID, status timeline, expected next action and support route. Quota/plan limits must be explained before submission.
+6. Validation: operator/agent requests clarifications, records evidence and provenance, separates fact from hypothesis, and decides validate, defer or reject with a reason.
+7. Solution and offer: customer receives a versioned quote showing scope, deliverables, exclusions, timeline, milestones, acceptance criteria, revision limits, price, tax/fees where known, payment schedule, cancellation/refund/dispute rules and quote expiry.
+8. Authorization: customer explicitly accepts the exact offer version. Acceptance creates a contract/order snapshot; edits require a new version and renewed acceptance.
+9. Checkout: server calculates the amount; customer selects an available gateway/method; payment intent is idempotent; checkout status and expiry are visible. Browser return is never payment proof.
+10. Payment verification: signed webhook and/or server-side inquiry confirms provider, order, amount, currency and status. Only then may the relevant paid mission be released for execution, unless an explicitly documented milestone/deposit contract says otherwise.
+11. Execution: customer sees mission milestones, blockers, requests for input, responsible operator and status history.
+12. Delivery: secure private artifacts, versioned delivery note, checklist against acceptance criteria and clear accept/revision/dispute actions.
+13. Closure: acceptance, payment, refund/dispute and contributor settlement remain separate states; customer receives receipt/summary and can access history.
+14. Retention and support: notification preferences, export/delete request, support ticket and account closure path.
+
+Contributor journey:
+1. Apply with identity/profile, location/timezone if relevant, skills, portfolio/evidence, availability and preferred task types.
+2. Consent to contributor terms and data handling; verify identity/KYC only when legally and operationally required.
+3. Operator reviews and approves, rejects or requests more information; contributor status is visible.
+4. Contributor sees only eligible tasks with scope, deliverables, deadline, dependencies, acceptance criteria, compensation, payment terms and required tools before accepting.
+5. Contributor accepts a task; system records assignment and conflict/availability checks.
+6. Work submission includes versioned artifacts and completion evidence; revisions and feedback are traceable.
+7. Quality reviewer accepts/rejects with reason. A payable is created only according to the approved compensation policy; payment/payout state is independently tracked.
+8. Contributor sees earnings ledger, pending/approved/paid status, remittance reference, disputes and support. Never advertise earnings that are not verified.
+
+Operator/admin journey:
+- Unified queues for new requests, evidence review, offer approvals, payment exceptions, mission blockers, delivery acceptance, disputes, refunds, contributor verification and payouts.
+- Each action has least-privilege permission, reason, actor, timestamp, before/after state and audit event.
+- Maker-checker separation for refunds, payouts, manual ledger adjustments and sensitive role changes.
+- Operators can pause, defer, reject or escalate; no agent can commit funds or external contracts without policy approval.
+
+Journey-wide requirements:
+- One canonical status timeline and notification event model across email/in-app channels; no duplicate or contradictory status.
+- Every state has owner, next action, SLA/expected response, failure/retry path and escalation.
+- Save/resume, idempotency, accessibility, mobile responsiveness, localization (IDR/Asia-Jakarta), data export/deletion and support are first-class.
+- All customer-facing statuses derive from server state; no hardcoded sample metrics or fake activity.
+- Ensure empty, loading, stale, validation, success, failure, pending, disputed and cancelled states are designed and tested.
+
+**Exit gate:** one customer can complete request → evidence validation → versioned offer → explicit acceptance → verified sandbox payment → mission → delivery → acceptance/dispute; one contributor can onboard → be approved → accept a compensated task → submit work → receive a reconciled payable status; one operator can manage exceptions with audit evidence.
+
+### Phase 3 — Monetization, pricing, payments and unit economics
+**Objective:** monetize transparently without confusing subscription access, project fees, platform revenue or contributor earnings.
+
+DAYANEXA uses a layered hybrid model:
+
+**Layer A — SaaS access subscription (existing price hypothesis; not yet proven willingness-to-pay):**
+
+| Plan | Price / 30 days | Request quota | AI assists | Seats | Intended value |
+|---|---:|---:|---:|---:|---|
+| Free | Rp0 | 2 | 0 | 1 | Entry, request tracking, offers and delivery history |
+| Pro | Rp149.000 | 10 | 50 | 3 | Priority review and bounded AI-assisted intake |
+| Plus | Rp399.000 | 30 | 200 | 10 | Managed priority, operator support and mission economics visibility |
+
+- These prices are owner-approved working hypotheses from the current product table, not market-validated facts. Test conversion, retention, support burden, cost-to-serve and willingness-to-pay before raising or locking them.
+- Subscription grants software access, quotas and support entitlements. It does **not** include the cost of a customer-specific build, service execution, third-party provider spend or contributor compensation unless a specific offer says so.
+- Current commercial copy says 30-day access without automatic renewal. Preserve explicit opt-in renewal only if later implemented and legally reviewed. Do not imply auto-renewal or charge a saved method silently.
+- Fix period semantics: usage counters currently use calendar-month boundaries while subscription records use 30-day periods. Choose one canonical quota window (recommended: the active subscription period for paid plans and calendar month for Free only if disclosed) and enforce it server-side consistently in UI and API.
+- Enforce `aiAssistsPerMonth` as a real quota, not just a UI entitlement. Show usage, reset date, limit behavior and upgrade route.
+- Define upgrade/downgrade timing, pending payment, failed payment, expiration, cancellation, grace period and refund behavior. No ambiguous immediate access before payment verification.
+
+**Layer B — One-time project/service revenue (existing indicative starting prices):**
+
+| Offer | Starting price | Commercial unit |
+|---|---:|---|
+| Demand Validation | Rp750.000 | per project |
+| Solution Sprint | Rp3.500.000 | per sprint |
+| Build & Deliver | Rp9.500.000 | per mission |
+| Managed Operations | Rp4.900.000 | per month |
+
+These are starting-price hypotheses, not automatic checkout prices. The final versioned quote controls. Subscription fee and project fee are separate line items and must be shown separately. Every quote must include scope, assumptions, deliverables, exclusions, schedule, acceptance, revision, tax, gateway fees if passed through, refund/cancellation, dispute and payment schedule.
+
+**Layer C — Recurring managed operations.**
+- Sell ongoing operational outcomes only where scope, cadence, service levels, reporting, staffing, renewal and exit conditions are defined.
+- The existing Rp4.900.000/month is an indicative starting price, not a live recurring contract or automatic charge.
+- Renewals require explicit agreement and verified payment until a legally reviewed recurring billing capability is implemented.
+
+**Layer D — Metered usage and add-ons (future, not enabled by default).**
+- Potential billable units: additional validated requests, AI-assisted tasks, research credits, seats, priority turnaround, storage/retention and additional mission scope.
+- Each unit needs a published price, unit definition, included allowance, warning threshold, hard cap, tax treatment and explicit purchase confirmation.
+- Never silently overage, auto-top-up or consume a paid provider quota on behalf of a customer.
+
+**Layer E — Partner/marketplace monetization (future gated capability).**
+- Potential platform fee/commission, partner service margin or approved split settlement only after provider eligibility, merchant KYC, legal fund-flow review and contributor/partner contract.
+- No escrow claim, custody claim, automatic split, sub-account or commission deduction without explicit product and legal approval and verified gateway capability.
+- Keep this layer disabled in the MVP. A single-merchant collection plus separately approved contributor payout is the permitted pilot shape until evidence says otherwise.
+
+**Economic truth and price governance:**
+- Maintain separate records for gross customer charge, discounts, taxes, gateway fees, refunds/chargebacks, net cash, recognized platform revenue, direct provider cost, contributor/partner compensation, platform gross margin, contribution margin, payout liability and settlement.
+- Gross checkout amount is not platform revenue. Subscription revenue, project revenue, pass-through funds and contributor payables must not be conflated.
+- Quote price is server-authoritative and versioned; client cannot set price, discount, tax, plan, quota or margin.
+- Calculate mission gross margin and contribution margin before offer approval; enforce minimum margin and contingency rules with an audited exception path.
+- Validate price with real customer interviews, paid pilots, win/loss reasons and measured delivery cost; never treat an indicative price as validated demand.
+
+**Payment and billing behavior:**
+- One normalized interface for Duitku, Xendit, Midtrans and Faspay; provider-specific capability flags for payment methods, inquiry, webhook, refunds, settlement reports and payouts.
+- Keep `PAYMENTS_MODE=mock` and `PAYMENT_LIVE_ENABLED=false` until merchant approval, sandbox contract tests, webhook verification, reconciliation and owner authorization are complete.
+- Start with one approved collection gateway for a controlled single-merchant pilot; keep the other adapters inactive until tested. Faspay remains fail-closed until merchant-specific contract/channel details are verified.
+- Payment intent amount/currency/order are computed server-side from an accepted offer or plan; idempotency key prevents duplicates; webhook signature/replay/deduplication and server-side reconciliation are mandatory.
+- Subscription payment and project payment are distinct purposes, products and ledger postings.
+- Refunds, chargebacks, payouts and manual adjustments require approval and maker-checker controls. A payout request is not a paid payout.
+- Never release a paid mission based on browser redirect or client-supplied status.
+
+**Exit gate:** plan entitlements and period usage are enforced; quote-to-checkout amount is immutable and correct; sandbox payment/webhook/reconciliation/refund scenarios pass; double-entry ledger balances; revenue, costs, margin and contributor payable reconcile; no live money movement occurs without owner approval.
+
+### Phase 4 — Intelligence, execution reliability and scale readiness
+**Objective:** operate DAYANEXA as a trustworthy economic resolution system, not merely a customer portal.
+
+Work:
+- Complete evidence provenance, source permissions, demand confidence and human validation; separate observed facts, inferred hypotheses and decisions.
+- Workers AI task profiles, deterministic test mocks, usage budgets, latency/quality tracking and model versioning; no automatic paid fallback to Groq or other vendors.
+- Source-specific Apify vs Scrape.ly benchmark; choose one per task and enforce source policy, quotas and retention.
+- Capability Foundry tracks build/buy/license/integrate/partner/human routes with cost, lead time, ownership, maintenance and risk.
+- Durable mission orchestration: task dependencies, retries, idempotency, cancellation, pause/resume, deadline/SLA, human approval and compensation.
+- Quality gates, artifact versioning, private R2 access, malware/MIME/size checks, signed short-lived download links, acceptance, revision and dispute workflows.
+- Complete all 14 workspaces with live, permission-filtered APIs; add operational queues, notifications, support, audit explorer, economic ledger and owner dashboards.
+- Observability: structured traces, correlation IDs, provider cost, payment health, queue age, SLA breaches, error budget, backups/restore and incident runbooks.
+- Privacy and legal readiness: retention/deletion/export, consent, processor inventory, data subject requests, reviewed Terms/Privacy/refund/contributor terms and incident response.
+- Controlled pilot with a narrow customer segment and low execution budgets; measure Verified Economic Resolution, request-to-offer time, offer acceptance, paid conversion, delivery acceptance, dispute/refund rate, repeat purchase, contributor earnings actually paid, margin per mission, cost per outcome and customer retention.
+- Scale only after repeatable positive unit economics, reliability and safe contributor operations.
+
+**Exit gate:** a limited pilot completes repeated, evidence-backed, paid, accepted missions with reconciled economics, safe contributor settlement, controlled risk and no fabricated metrics. Wider launch requires an explicit owner go/no-go.
+
+## 19. Global Definition of Done
 
 ### Phase 0 — Audit and system lock
 - Audit every repository file, current code, CI, dependency, migration and deployment.
@@ -436,19 +582,19 @@ A feature is not done because a screen exists or a commit was made. It is done o
 - No fake data is represented as live.
 - Owner approval is obtained for production, payments and external commitments.
 
-## 16. Current repository state — must be re-audited
+## 20. Current repository state — verified baseline 16 Nov 2026
 
-The repository has a React/Vite prototype and an initial Workers API/payment scaffold. These are **not** proof of a complete application, working Clerk Production login, provider sandbox validation, real payment processing, payout, reconciliation, or production deployment.
+The repository currently contains a React/Vite application, Hono API bundle, five D1 migrations, Workers AI binding, R2 binding, Clerk Core 3 source migration, pricing/plan routes, customer UI and four payment adapter files. Their presence is not proof of production operation. The latest inspected Pages deployment was ad-hoc, the Pages project API returned no connected Git source, and its deployed commit was older than the Clerk migration. The package lockfile was absent from the inspected main tree after the SDK update and must be regenerated and committed before CI can use a reproducible clean install. Real Google sign-in, Clerk webhook, payment gateway sandbox/live, contributor payout and complete end-to-end customer journeys remain unverified.
 
 The next implementation agent must audit these artifacts first:
 - `src/App.tsx`, `src/main.tsx`, `src/styles.css`
-- `apps/api/src/**`, `apps/api/migrations/**`, `apps/api/wrangler.toml`
+- `apps/api/src/**`, `apps/api/migrations/**`, `wrangler.jsonc`
 - `package.json`, CI workflow, environment examples
 - `docs/00` through `docs/15`
 
 Do not simply add more code on top of unverified adapters. Verify official API specs and signature examples for each gateway; fix mismatches and create provider-specific contract tests. In particular, merchant-specific Faspay endpoints/channels and each provider's webhook verification must be confirmed against the actual merchant product and sandbox.
 
-## 17. Owner-controlled activation checklist
+## 21. Owner-controlled activation checklist
 
 The implementation agent may prepare code, migrations, tests and setup instructions. It must not claim or perform the following without actual account access, required details and owner approval:
 - Create or alter Clerk Production instance, domain, OAuth providers or production keys.
@@ -460,7 +606,7 @@ The implementation agent may prepare code, migrations, tests and setup instructi
 
 For each external dependency, report exact required owner action and the evidence needed to mark it ready.
 
-## 18. Canonical related documents
+## 22. Canonical related documents
 
 - `docs/00-product-constitution.md`
 - `docs/01-master-architecture.md`
@@ -479,3 +625,11 @@ For each external dependency, report exact required owner action and the evidenc
 - `docs/14-identity-monetization-and-payments.md`
 - `docs/15-implementation-foundation.md`
 - `apps/api/README.md`
+
+## 23. V2 decision log and owner constraints
+- Canonical brand/product remains DAYANEXA; repo `Sparkmind-obp-off/Dayanexa`, branch `main`.
+- Genspark is not a required build or execution dependency. Implementation must be executable through the repository, Cloudflare, GitHub and verified provider interfaces.
+- Google-only Clerk Production remains the selected identity policy.
+- Workers AI remains default inference; Groq remains optional and disabled.
+- Existing Free/Pro/Plus and service starting prices remain hypotheses to test, not guaranteed revenue.
+- No paid provider usage, live payment, payout, refund, DNS mutation, production secret rotation or production deployment without the relevant explicit owner authorization.
