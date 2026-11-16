@@ -1,6 +1,6 @@
 # Clerk publishable key — Vite build contract
 
-**Status:** Source fix committed; CI/build verification pending. Production deployment not yet performed.
+**Status:** Source fix committed; GitHub Actions CI passed for commit `2cd66e2dc0a9496417df8e2eec7438b016eb0922` (run `43847796716`). Production artifact deployment and Google Sign-In verification remain pending.
 **Scope:** Public Clerk publishable key only. No secret key, JWT verification key or webhook secret is exposed to the browser.
 
 ## Incident
@@ -32,6 +32,6 @@ The value is injected only into the exact frontend expression consumed by Clerk.
 - Do not change Clerk providers, use mock auth, expose `CLERK_SECRET_KEY` / `CLERK_JWT_KEY`, or alter unrelated Clerk applications.
 - Runtime config changes alone are insufficient; this is a Vite build-time value.
 
-## Evidence boundary
+## Current execution state (16 November 2026)\n\n- Source fix commit: `630ba760fad7656811bbe5346283041e96accd92`.\n- Latest master/prompt commit before this deployment-governance update: `2cd66e2dc0a9496417df8e2eec7438b016eb0922`.\n- GitHub Actions run `43847796716` completed successfully for that exact SHA.\n- No production artifact has yet been proven deployed from that run. Production domain and Google Sign-In must still be tested after a fresh exact-SHA deployment.\n- Canonical release process: `docs/28-production-build-artifact-and-pages-deployment.md`.\n\n## Evidence boundary
 
 A successful GitHub CI build proves the new source compiles and the build-time resolution works in CI. It does not prove the production domain is fixed. Production is only fixed after a new deployment and browser/authentication smoke tests.
