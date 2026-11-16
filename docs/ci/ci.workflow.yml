@@ -18,6 +18,39 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Reject committed environment-specific files
+        run: |
+          if git ls-files | grep -E '(^|/)\\.env\\.(production|development)
+        run: npm ci
+      - name: No deprecated Clerk React package
+        run: "! npm ls @clerk/clerk-react --all 2>/dev/null | grep -q clerk-react"
+      - name: Type check (web + api)
+        run: npm run typecheck
+      - name: Unit + integration tests (sandbox money flow on real migrations)
+        run: npm test
+      - name: Migration check
+        run: npm run check:migrations
+      - name: Secret scan
+        run: npm run check:secrets
+      - name: Dependency audit (production deps)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Production build
+        run: npm run build
+      - name: Worker bundle contains no secret material
+        run: "! grep -E 'sk_live_|tvly-|fc-[A-Za-z0-9]{20}|apify_api_|gsk_[A-Za-z0-9]{20}|scrapely_' -r dist"
+  smoke:
+    if: github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Production smoke
+        run: |
+          curl -fsS https://dayanexa.biz.id/api/v1/health | grep -q '"ok":true'
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://dayanexa.biz.id/api/v1/me)" = "401"
+; then
+            echo "Environment-specific .env files must not be committed."
+            exit 1
+          fi
       - name: Clean install (lockfile)
         run: npm ci
       - name: No deprecated Clerk React package
