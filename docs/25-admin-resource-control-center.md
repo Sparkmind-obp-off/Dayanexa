@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Date:** 16 November 2026  
 **Authority:** DAYANEXA V3 Demand-to-Execution Master System  
-**Status:** Canonical requirement; initial owner-only dashboard shell and read/verify views are implemented. Persistent provider policies, editable Actor registry, budget enforcement controls and full customer administration remain pending.
+**Status:** Canonical requirement; initial owner-only dashboard shell and read/verify views are implemented. Persistent provider policies, editable Actor registry, budget enforcement controls and full customer administration remain pending. The detailed runtime governance contract is defined in docs/26-provider-runtime-governance.md; runtime enforcement remains pending.
 
 ## 1. Purpose
 
@@ -118,3 +118,10 @@ Use maker-checker for financial or high-impact actions. The requester cannot app
 ## 6. Definition of done
 
 The Admin & Resource Control Center is complete only when owner/operator roles see only their authorized actions; customer and contributor actions update canonical state and audit events; provider policies are persisted and enforced server-side before every external call; Actor execution requires an approved registry record, validated schema, stable idempotency and hard cost cap; provider/Actor costs reconcile to source usage and mission attribution without mixing currencies; cap exhaustion prevents external calls and paid fallback; Cloudflare/CI indicators come from actual checks, not static labels; and CI/browser tests prove permissions, tenant isolation, approvals and no destructive side effects.
+
+
+## 7. Runtime enforcement and account failover
+
+Read and implement the canonical contract in [docs/26-provider-runtime-governance.md](26-provider-runtime-governance.md). Provider and Actor administration is incomplete until every outbound provider call is routed through one server-side runtime policy gateway that checks account authorization, terms, quota freshness, rate limits, per-request/daily/monthly/mission caps and an atomic usage reservation before dispatch.
+
+The system may pause an exhausted provider/account and may select another account only through an explicit, owner-approved, terms-compliant fallback allowlist. It must not rotate accounts to evade rate limits, free-tier restrictions, bans, suspensions, trial limits or provider terms. Unknown/stale quota fails closed. Paid use, overage, paid fallback and top-up remain disabled absent explicit scoped owner approval. Every reservation, dispatch, fallback and reconciliation must be auditable. A registry or dashboard field is not proof of runtime enforcement.
