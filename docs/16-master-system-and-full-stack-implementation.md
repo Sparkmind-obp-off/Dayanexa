@@ -77,7 +77,7 @@ External vendors are replaceable capabilities, not the system's source of truth.
 | Workflow/agent framework | DAYANEXA-native lifecycle first; LangGraph optional later | Canonical workflow state and orchestration |
 | Multi-agent framework | CrewAI experimental only, not on critical path | Optional bounded agent collaboration |
 | Monitoring | Cloudflare logs/metrics + structured application events; OpenTelemetry-compatible traces where practical | Runtime health, cost, latency and errors |
-| CI/CD | GitHub Actions + Cloudflare deployment | Checks, build, migrations and controlled release |
+| Release operations | Manual local validation + Cloudflare Wrangler | Operator-controlled checks, build, Pages deployment and smoke verification; no GitHub Actions workflow |
 | Domain/DNS | Cloudflare | DNS, TLS, routing and environment separation |
 
 This is a target design, not a claim that every account, plan, feature or resource is currently activated. Confirm account-specific availability, limits and prices before relying on them.
@@ -382,7 +382,7 @@ Work:
 - Google is the only enabled social provider. No email/password, magic link or other social provider is to be introduced without an explicit owner decision.
 - Confirm the canonical host is `https://dayanexa.biz.id`; `www` behavior must be deliberate and consistent. Verify DNS, TLS, Clerk domain and redirect allowlists independently; a domain merely appearing in Pages configuration is not proof of DNS/TLS health.
 - Repair Cloudflare Pages source integration or document a repeatable, authenticated deployment path. Current account inspection showed the Pages project has no source connection and its latest deployment is an ad-hoc build; do not assume a push to GitHub publishes production.
-- Correct CI so clean install, typecheck, tests, migration checks, secret scan, dependency audit and production build run against the committed lockfile. CI workflow installation requires GitHub Actions permission; do not claim it exists while it is only in `docs/ci`.
+- Use local release validation commands against the committed lockfile: `npm ci`, `npm run check`, `npm run audit`, and `npm run build`. GitHub Actions workflows are intentionally retired; do not recreate CI/CD unless the owner explicitly changes this decision.
 - Test sign-up, sign-in, sign-out, refresh, expired/revoked session, protected `/api/v1/me`, Google-only enforcement, owner bootstrap and role/tenant isolation.
 - Review owner bootstrap: only a verified Google identity matching the explicitly configured owner allowlist may receive initial owner access; bootstrap must be one-time, auditable, and must not allow self-promotion through client metadata.
 - Verify Clerk webhook signature, event deduplication, user update/deletion/suspension handling and safe replay.
@@ -537,7 +537,7 @@ The repository currently contains a React/Vite application, Hono API bundle, fiv
 The next implementation agent must audit these artifacts first:
 - `src/App.tsx`, `src/main.tsx`, `src/styles.css`
 - `apps/api/src/**`, `apps/api/migrations/**`, `wrangler.jsonc`
-- `package.json`, CI workflow, environment examples
+- `package.json`, local validation scripts, Wrangler configuration, environment examples
 - `docs/00` through `docs/15`
 
 Do not simply add more code on top of unverified adapters. Verify official API specs and signature examples for each gateway; fix mismatches and create provider-specific contract tests. In particular, merchant-specific Faspay endpoints/channels and each provider's webhook verification must be confirmed against the actual merchant product and sandbox.
@@ -656,7 +656,7 @@ V3 is complete only when each engine passes its own code, schema, UI, permission
 
 ## 29. Admin & Resource Control Center
 
-The canonical owner/operator control plane is specified in `docs/25-admin-resource-control-center.md`. It adds an administrative workspace alongside the existing 14 workspaces for customer management, contributor management, provider and Actor registry, cost/usage governance, Cloudflare operations visibility, approvals and audit. Provider policies must be persisted and enforced server-side; the dashboard must never expose secrets or imply control over Cloudflare billing. The CI workflow is retained, must reject tracked production/development .env files, and must never perform destructive production data cleanup. The Admin Control Center is incomplete until API, schema, UI, role enforcement, tests and operational evidence all exist.
+The canonical owner/operator control plane is specified in `docs/25-admin-resource-control-center.md`. It adds an administrative workspace alongside the existing 14 workspaces for customer management, contributor management, provider and Actor registry, cost/usage governance, Cloudflare operations visibility, approvals and audit. Provider policies must be persisted and enforced server-side; the dashboard must never expose secrets or imply control over Cloudflare billing. GitHub Actions CI/CD workflow and its unused template are retired by owner decision. Keep the local validation scripts and the manual Wrangler release contract; never perform destructive production data cleanup. The Admin Control Center is incomplete until API, schema, UI, role enforcement, tests and operational evidence all exist.
 
 
 ## 30. Provider Runtime Governance & Account Failover
