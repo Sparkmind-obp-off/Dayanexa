@@ -2,7 +2,7 @@
 
 **Version:** 3.0 · Demand-to-Execution Architecture
 
-**Version:** 2.0 · **Updated:** 16 November 2026
+**Historical V2 baseline:** 2.0 · superseded by the V3 override below · **Updated:** 16 November 2026
 
 **Inference decision:** Cloudflare Workers AI via `env.AI` is the default; GroqCloud is optional and disabled by default.
 
@@ -38,7 +38,7 @@ DAYANEXA doctrine: **Discover demand. Build the capability. Deliver the outcome.
 - Economics: payment events, reconciliation, refunds/disputes, balanced double-entry ledger, costs, revenue, margin and settlement liability.
 - CI: frontend and API checks, tests, migration validation, adapter fixtures, secret scanning, dependency audit and deployment smoke tests.
 
-## V2 mandatory delivery order — four gated phases
+## V2 baseline delivery order (historical; superseded by V3 override below)
 
 The canonical implementation contract is now V2.0. Follow exactly these four phases and do not jump ahead.
 
