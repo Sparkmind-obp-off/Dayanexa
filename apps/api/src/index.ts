@@ -4,6 +4,7 @@ import { ApiError } from "./lib/http";
 import { requireAuth } from "./middleware/auth";
 import { bodyLimit, requestContext, strictCors } from "./middleware/security";
 import { commerce } from "./routes/commerce";
+import { discovery } from "./routes/discovery";
 import { billing } from "./routes/billing";
 import { governance } from "./routes/governance";
 import { intel } from "./routes/intel";
@@ -29,6 +30,8 @@ export function createApp() {
   secured.use("*", requireAuth);
   secured.route("/", me);
   secured.route("/", intel);
+  // Mounted AFTER intel so its /discovery/* middleware never runs in front of the legacy operator discovery routes.
+  secured.route("/", discovery);
   secured.route("/", ops);
   secured.route("/", providerAdmin);
   secured.route("/", commerce);

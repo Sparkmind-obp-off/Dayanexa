@@ -12,6 +12,7 @@ import { InferenceError } from "../inference/types";
 import { assertEntitlement, entitlements, usageStatement } from "../services/entitlements";
 import { customerNextAction } from "../domain/journey";
 import { D, notifyStaff, P, page, RID } from "./helpers";
+import { memberDiscoveryStatus } from "../discovery/entitlements";
 
 export const me = new Hono<AppEnv>();
 export const TERMS_VERSION = "2026-11-16";
@@ -22,7 +23,10 @@ me.get("/me", async (c) => {
   const orgs = await many(d, "SELECT o.id,o.name,o.kind,m.role FROM memberships m JOIN organizations o ON o.id=m.org_id WHERE m.user_id=?", p.userId);
   const contributor = await one(d, "SELECT headline,skills,status,terms_accepted_at FROM contributor_profiles WHERE user_id=?", p.userId);
   const ent = await entitlements(d, p.primaryOrgId);
-  return c.json({ user: profile, roles: p.roles, permissions: [...permissionsOf(p)].sort(), organizations: orgs, primaryOrgId: p.primaryOrgId, contributor,
+  // Discovery entitlement is separate from platform role, membership and plan request quota (docs/30 §3).
+  let discovery: unknown = null;
+  try { discovery = await memberDiscoveryStatus(d, p.primaryOrgId, p.userId); } catch { discovery = { state: "schema_not_migrated" }; }
+  return c.json({ discovery, user: profile, roles: p.roles, permissions: [...permissionsOf(p)].sort(), organizations: orgs, primaryOrgId: p.primaryOrgId, contributor,
     plan: ent.plan, subscription: ent.subscription, usage: ent.usage, window: ent.window, termsVersion: TERMS_VERSION,
     needsOnboarding: !profile?.onboarded_at || profile?.terms_version !== TERMS_VERSION });
 });

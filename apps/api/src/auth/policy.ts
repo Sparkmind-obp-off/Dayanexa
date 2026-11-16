@@ -4,22 +4,24 @@ import { fail } from "../lib/http";
 export type Permission =
   | "workspace:read" | "intel:write" | "provider:run" | "ai:run" | "catalog:write" | "commercial:write"
   | "mission:write" | "delivery:write" | "ledger:read" | "ledger:write" | "governance:read" | "governance:write"
-  | "approval:decide" | "roles:manage" | "contributor:work" | "customer:self" | "provider:admin";
+  | "approval:decide" | "roles:manage" | "contributor:work" | "customer:self" | "provider:admin"
+  /** Product entitlement for the member-facing V3 workspace. NOT a staff permission; never implies cross-tenant access. */
+  | "v3:use";
 
 const ALL: Permission[] = [
   "workspace:read", "intel:write", "provider:run", "ai:run", "catalog:write", "commercial:write", "mission:write",
   "delivery:write", "ledger:read", "ledger:write", "governance:read", "governance:write", "approval:decide",
-  "roles:manage", "contributor:work", "customer:self", "provider:admin",
+  "roles:manage", "contributor:work", "customer:self", "provider:admin", "v3:use",
 ];
 
 export const ROLE_PERMISSIONS: Record<PlatformRole, Permission[]> = {
   owner: ALL,
   operator: ["workspace:read", "intel:write", "provider:run", "ai:run", "catalog:write", "commercial:write", "mission:write",
-    "delivery:write", "ledger:read", "governance:read", "customer:self", "contributor:work"],
-  analyst: ["workspace:read", "intel:write", "provider:run", "ai:run", "governance:read", "customer:self"],
-  finance: ["workspace:read", "ledger:read", "ledger:write", "governance:read", "customer:self"],
-  contributor: ["contributor:work", "customer:self"],
-  member: ["customer:self"],
+    "delivery:write", "ledger:read", "governance:read", "customer:self", "contributor:work", "v3:use"],
+  analyst: ["workspace:read", "intel:write", "provider:run", "ai:run", "governance:read", "customer:self", "v3:use"],
+  finance: ["workspace:read", "ledger:read", "ledger:write", "governance:read", "customer:self", "v3:use"],
+  contributor: ["contributor:work", "customer:self", "v3:use"],
+  member: ["customer:self", "v3:use"],
 };
 
 export function permissionsOf(principal: Principal): Set<Permission> {

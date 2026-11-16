@@ -239,7 +239,7 @@ async function recordLegacyUsage(d: D1Database, req: GatewayRequest, accountId: 
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(newId("pus"), req.providerId, req.capability, req.orgId ?? null, req.userId ?? null, units, req.unitType, estimated ? 1 : 0, cost, status, errorCode, providerRequestId, null, today(), accountId, reservationId).run();
 }
 
-async function loadPrimary(d: D1Database, providerId: string, capability: string): Promise<Row | null> {
+export async function loadPrimary(d: D1Database, providerId: string, capability: string): Promise<Row | null> {
   // Deterministic primary = highest priority authorized+active account approved for this capability.
   // We deliberately DO NOT iterate to the next account when the primary is exhausted/limited: that would be rotation.
   // Paused/exhausted accounts STAY primary (and therefore block) — only an explicit owner action

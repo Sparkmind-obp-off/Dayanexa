@@ -8,7 +8,8 @@ for (const f of files) { db.exec(readFileSync(`${dir}/${f}`, "utf8")); console.l
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name);
 const required = ["users", "organizations", "memberships", "user_roles", "approvals", "audit_events", "signals", "demands", "demand_evidence", "opportunities", "opportunity_assessments",
   "solutions", "capabilities", "capability_gaps", "products", "offers", "agents", "missions", "tasks", "artifacts", "deliveries", "disputes", "lifecycle_transitions",
-  "provider_usage", "inference_traces", "payment_intents", "payment_events", "refunds", "payout_requests", "cost_records", "ledger_accounts", "ledger_journals", "ledger_entries", "subscriptions"];
+  "provider_usage", "inference_traces", "payment_intents", "payment_events", "refunds", "payout_requests", "cost_records", "ledger_accounts", "ledger_journals", "ledger_entries", "subscriptions",
+  "discovery_policies", "discovery_sources", "discovery_source_reviews", "discovery_program_budgets", "discovery_campaigns", "discovery_jobs", "discovery_entitlements", "discovery_envelopes", "discovery_campaign_evidence"];
 const missing = required.filter((t) => !tables.includes(t));
 if (missing.length) { console.error("missing tables:", missing); process.exit(1); }
 const accounts = db.prepare("SELECT COUNT(*) AS n FROM ledger_accounts").get().n;
