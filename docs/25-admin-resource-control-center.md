@@ -85,7 +85,7 @@ Do not add USD and IDR without an explicit dated FX source. Do not count provide
 
 ### 3.7 Cloudflare & Delivery Operations
 
-Show verified configuration/health for Pages project, active deployment and Git commit provenance; Workers/Pages Functions runtime; D1 binding, migration version and backup/restore status; R2 binding, private bucket status and artifact lifecycle; Workers AI binding and budget status; Queues/Workflows binding and durable job status when implemented; environment separation (local/preview/production); CI workflow path, last run, result, artifact/build SHA and production smoke result.
+Show verified configuration/health for Pages project, active deployment and Git commit provenance; Workers/Pages Functions runtime; D1 binding, migration version and backup/restore status; R2 binding, private bucket status and artifact lifecycle; Workers AI binding and budget status; Queues/Workflows binding and durable job status when implemented; environment separation (local/preview/production); local release-check record, Wrangler deployment ID/build SHA and production smoke result.
 
 The application may display presence and health; it must never expose secret values. Secret rotation and billing-plan changes remain in Cloudflare/provider consoles, not a public-facing application endpoint.
 
@@ -95,18 +95,18 @@ All provider/Actor activation, budget increase, customer suspension, contributor
 
 Use maker-checker for financial or high-impact actions. The requester cannot approve their own request. Provider cap exhaustion is a hard stop, not a prompt for automatic paid fallback.
 
-## 4. CI/CD and deletion policy
+## 4. Manual release and data-protection policy
 
-- Keep the CI workflow. It is required for reproducible verification and must not be deleted as routine cleanup.
-- The canonical workflow source remains docs/ci/ci.workflow.yml; the active GitHub Actions workflow must live under .github/workflows/.
-- CI verifies lockfile install, typecheck, tests, migration checks, secret scan, dependency audit, build and non-destructive production smoke.
-- CI must fail if .env.production or .env.development is tracked. Keep only safe .env.example templates in Git.
-- CI/CD must never automatically delete customer, contributor, payment, ledger, audit, D1, R2 or production data.
-- Destructive cleanup requires an explicit reviewed migration/runbook, backup and owner approval. No automatic production DB migration or data deletion from the CI workflow.
+- GitHub Actions CI/CD workflows and their template are retired by owner decision. Do not recreate them.
+- Use local commands against the committed lockfile: `npm ci`, `npm run check`, `npm run audit`, `npm run build`.
+- Deploy manually through Cloudflare Wrangler only after confirming account and Pages project `dayanexa`; see docs/28.
+- Local secret checks must reject tracked `.env.production` and `.env.development`. Keep safe `.env.example` templates only.
+- Manual release and maintenance must never delete customer, contributor, payment, ledger, audit, D1, R2 or production data.
+- Destructive cleanup requires a separately reviewed migration/runbook, backup and explicit owner approval. No production DB migration or data deletion as part of frontend deployment.
 
 ## 5. Implementation sequence
 
-1. Secure repository hygiene and active CI workflow.
+1. Secure repository hygiene and local validation scripts.
 2. Admin workspace shell, role matrix and real overview.
 3. Customer and contributor management views using existing canonical records and audited APIs.
 4. Persistent provider policies and server-side hard-budget enforcement.
@@ -117,7 +117,7 @@ Use maker-checker for financial or high-impact actions. The requester cannot app
 
 ## 6. Definition of done
 
-The Admin & Resource Control Center is complete only when owner/operator roles see only their authorized actions; customer and contributor actions update canonical state and audit events; provider policies are persisted and enforced server-side before every external call; Actor execution requires an approved registry record, validated schema, stable idempotency and hard cost cap; provider/Actor costs reconcile to source usage and mission attribution without mixing currencies; cap exhaustion prevents external calls and paid fallback; Cloudflare/CI indicators come from actual checks, not static labels; and CI/browser tests prove permissions, tenant isolation, approvals and no destructive side effects.
+The Admin & Resource Control Center is complete only when owner/operator roles see only their authorized actions; customer and contributor actions update canonical state and audit events; provider policies are persisted and enforced server-side before every external call; Actor execution requires an approved registry record, validated schema, stable idempotency and hard cost cap; provider/Actor costs reconcile to source usage and mission attribution without mixing currencies; cap exhaustion prevents external calls and paid fallback; Cloudflare/deployment indicators come from actual checks, not static labels; and automated/browser tests prove permissions, tenant isolation, approvals and no destructive side effects.
 
 
 ## 7. Runtime enforcement and account failover
