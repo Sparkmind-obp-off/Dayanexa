@@ -209,13 +209,13 @@ React/Vite/TypeScript; Hono on Cloudflare Workers/Pages; Clerk Production; D1; p
 
 Start modular monolith, not microservices. DAYANEXA owns domain model, lifecycle, data, workflows, policy, auth, audit, provider registry, cost control, payment state, ledger and learning. Providers are replaceable adapters, never business sources of truth.
 
-CI is GitHub Actions `.github/workflows/ci.yml`; template `docs/ci/ci.workflow.yml`. A Git push is not a deployment. Every production release must build from an exact commit, produce a scanned/provenanced artifact, deploy that exact artifact to the `dayanexa` Pages project through an approved protected release path, and record deployment ID/commit parity. Follow `docs/28-production-build-artifact-and-pages-deployment.md`. No deployment job may run migrations or mutate secrets, Clerk providers, payments or production data.
+DAYANEXA uses **manual Cloudflare-first releases with Wrangler**. GitHub is the source repository only; Git pushes do not deploy. GitHub Actions CI/CD workflows are intentionally not used. Before every release, the operator performs the documented local checks (`npm ci`, `npm run check`, `npm run audit`, `npm run build`), inspects the exact build output and deploys with the repository's Wrangler command (`npm run deploy`) to Pages project `dayanexa`. Record source commit, build/check results, Wrangler account/project confirmation, deployment ID/URL and post-deploy smoke evidence. Follow `docs/28-production-build-artifact-and-pages-deployment.md`.
 
 ## 12. Security, privacy and resilience
 
 Server-side RBAC/ABAC and tenant isolation; least privilege; maker-checker; immutable audit; no secrets in browser/logs/prompts/Git; only `.env.example` tracked; prohibit `.env.production` and `.env.development`; rate limiting, SSRF defenses, schema validation, safe uploads, signed short-lived URLs, privacy/terms consent, export/deletion requests, retention, backup/restore, incident response and key rotation. Fail closed for metered external operations when policy/quota cannot be checked.
 
-CI/CD must never delete customer, contributor, payment, ledger, audit, D1, R2 or production data. No automatic destructive production migration.
+Manual release and maintenance procedures must never delete customer, contributor, payment, ledger, audit, D1, R2 or production data. Never run a production migration as an incidental part of frontend deployment.
 
 ## 13. Existing implementation — reuse and gaps
 
@@ -231,7 +231,7 @@ A Batch V2 source audit at commit `04b4bbe4dd37fd2b4710bcab55e90cc42a0db6fa` fou
 - Versioned offers/quotes, customer request/invoice/payment, subscription/entitlement and double-entry ledger foundations.
 - Contributor compensation/task/settlement foundations.
 - Owner-only Admin & Resource Control Center shell and contributor verify/suspend action.
-- Environment files removed from Git and active non-destructive CI workflow added in subsequent batch.
+- Environment-specific files removed from Git. Historical GitHub Actions workflow/template have since been retired; local validation commands remain available.
 
 Audit classified the V3 engines as partial, not end-to-end. Gaps:
 - durable discovery jobs, source permissions, schema-driven Actor input, stable idempotency and complete cost reconciliation;
@@ -253,29 +253,29 @@ Classify every capability as:
 - Provider/sandbox verified (actual controlled external response and usage).
 - Production verified (deployed build parity and authorized browser/API workflow).
 
-Known historical evidence: admin batch commit `6e7b4c46908356fdb78f1c399e68a413694a3479` had CI run `43806769240` PASS. Provider governance documentation was later updated, including prompt commit `3cd2fdf9ff9fdacbb3c01389adb51e28649c76fd`. Those CI results do not prove later commits. Inspect current HEAD and Actions before claiming latest CI is green.
+Historical evidence only: earlier GitHub Actions runs `43806769240`, `43847796716` and `43850273982` passed for their respective historical commits. GitHub Actions has since been retired by owner decision. These results do not verify the current HEAD, a local build, or a production deployment. Use local checks and Wrangler deployment evidence for every release.
 
-Admin UI and governance docs were not thereby deployed to Cloudflare. Cloudflare Pages had previously not been connected to GitHub; deployment was manual via Wrangler/Cloudflare BYOK. Verify current state. Google login and Clerk webhook secret were previous production gates; verify current status. Current incident: the Vite build-time public-key source fix is committed and exact CI run `43847796716` passed for `2cd66e2dc0a9496417df8e2eec7438b016eb0922`; however no production artifact deployment or post-deployment Google Sign-In verification has been proven. Keep status **SOURCE FIX PASS / CI PASS / PRODUCTION DEPLOYMENT PENDING** until docs/28 acceptance criteria pass. Do not claim auth or deployment complete from source alone.
+Admin UI and governance docs are not deployed merely because they are committed. Cloudflare Pages deployment is manual via Wrangler. The Vite build-time Clerk public-key source fix is committed, but production deployment and post-deployment Google Sign-In verification have not been proven in the recorded baseline. Keep status **SOURCE FIX COMMITTED / PRODUCTION DEPLOYMENT PENDING** until docs/28 acceptance criteria pass. Historical CI success is not current release evidence.
 
 ## 14A. Production build and deployment contract
 
-All release states are distinct and must be evidenced separately: source committed, CI passed for exact SHA, production artifact built/scanned, artifact deployed, domain smoke passed, and Google authentication verified. Artifact provenance must include workflow run, commit SHA, artifact identity/checksum and Cloudflare Pages deployment ID. Do not infer one state from another.
+All release states are distinct and must be evidenced separately: source commit identified, local checks passed for that exact checkout, production build inspected/scanned, Wrangler deployment completed, domain smoke passed, and Google authentication verified. Record commit SHA, local command results, build timestamp/output identity, Cloudflare Pages deployment ID/URL and post-deploy evidence. Do not infer one state from another.
 
-The Clerk publishable-key incident is the active example: Vite requires a build-time value; runtime Pages variables cannot rewrite an existing bundle. Build from the corrected commit, inspect the output, scan for secrets, deploy only the exact artifact, then test the live domain and Google Sign-In. A manual/protected deployment is required until a reproducible approved pipeline exists. Missing credentials/artifact/project identity means stop, not improvise.
+The Clerk publishable-key incident is the active example: Vite requires a build-time value; runtime Pages variables cannot rewrite an existing bundle. Build from the corrected commit, inspect the output, scan for secrets, deploy only the exact artifact, then test the live domain and Google Sign-In. Use the documented manual Wrangler process. Confirm the authenticated Cloudflare account and exact Pages project before deployment. Missing credentials, wrong account, wrong project or uncertain build provenance means stop, not improvise.
 
 Deployment approval is scoped to the frontend bundle only. It does not authorize D1 migrations, Clerk dashboard changes, secret changes, payment changes, provider spend, billing changes or data deletion. See `docs/28-production-build-artifact-and-pages-deployment.md`.
 
 ## 15. Phased implementation and exit gates
 
-**Phase 0 — Fresh audit:** inspect current main HEAD/tree/routes/services/adapters/migrations/workspaces/CI/deployment. Refresh code audit. Map each requirement to code, gaps, tests and owner gates. Exit: no duplicate work or destructive rewrite.
+**Phase 0 — Fresh audit:** inspect current main HEAD/tree/routes/services/adapters/migrations/workspaces/local validation scripts/Wrangler deployment. Refresh code audit. Map each requirement to code, gaps, tests and owner gates. Exit: no duplicate work or destructive rewrite.
 
-**Phase 1 — Identity & production integrity:** Clerk Google-only, SDK, callback/domain, JWT, webhook, owner allowlist, tenant isolation, real sign-in/out/refresh, /api/v1/me, current CI and approved deployment parity.
+**Phase 1 — Identity & production integrity:** Clerk Google-only, SDK, callback/domain, JWT, webhook, owner allowlist, tenant isolation, real sign-in/out/refresh, /api/v1/me, local validation and Wrangler deployment parity.
 
 **Phase 2 — Customer/contributor/operator journeys:** full role flows and tenant tests.
 
 **Phase 3 — Commercial/economic integrity:** immutable quote, entitlement window, payment webhook/inquiry, ledger, tax/fees/revenue/cost/payable/settlement. Live payment remains gated.
 
-**Phase 4 — Admin Control Center:** customer/contributor administration, provider/account/Actor registry, cost/usage/quota, approvals, Cloudflare/CI/deployment/backup/restore/audit. Owner-only until granular RBAC is tested.
+**Phase 4 — Admin Control Center:** customer/contributor administration, provider/account/Actor registry, cost/usage/quota, approvals, Cloudflare/deployment/backup/restore/audit. Owner-only until granular RBAC is tested.
 
 **Phase 5 — V3-A Discovery reliability:** durable jobs, schema-driven Actors, permissions, stable idempotency, retry/cancel/pagination, budgets and usage.
 
