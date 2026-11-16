@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { UserButton } from "@clerk/react";
-import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox } from "lucide-react";
+import { Bell, Bot, Boxes, BriefcaseBusiness, ChartNoAxesCombined, CreditCard, FileCheck2, Gauge, GitBranch, HandHelping, Home, Layers3, Lightbulb, Menu, PlusCircle, Radar, Search, ShieldCheck, Store, Wallet, Inbox, LifeBuoy, Lock, ListChecks } from "lucide-react";
 import { Brand } from "./Public";
 import { useSession } from "../lib/session";
 import { useGet } from "../lib/api";
 import { ErrorBox, Loading } from "../components/ui";
 import { Billing, ContributorPage, CustomerHome, MyRequests, NewRequest, Notifications } from "./Customer";
 import { MissionDetail } from "./MissionDetail";
+import { Onboarding, OpsQueues, PrivacyPage, RequestDetail, SupportPage } from "./Journey";
 import * as W from "../workspaces";
 
 export const WORKSPACES = [
@@ -33,6 +34,7 @@ export default function AppShell() {
   const loc = useLocation();
   const notes = useGet<{ unread: number }>(me ? "/notifications?limit=1" : null, { refetchInterval: 60_000 });
   if (loading) return <Loading label="Memverifikasi sesi…" />;
+  if (me?.needsOnboarding) return <Onboarding />;
   if (error) return <div className="fatal stack"><Brand /><h2>Tidak dapat memuat akun</h2><ErrorBox error={error} /><p className="muted small">Jika ini terjadi setelah login, server mungkin belum selesai dikonfigurasi (database / kunci verifikasi Clerk). Tidak ada login alternatif atau mock.</p><UserButton /></div>;
   const title = WORKSPACES.find((w) => loc.pathname.includes(`/w/${w.path}`))?.name ?? CUSTOMER_TITLES.find(([p]) => loc.pathname === `/app${p}`)?.[1] ?? "DAYANEXA";
   const nav = (to: string, label: string, Icon: typeof Home, idx?: string) => <NavLink key={to} to={to} end={to === "/app"} className={({ isActive }) => `nav ${isActive ? "on" : ""}`} onClick={() => setOpen(false)}><Icon size={16} /><span>{label}</span>{idx && <span className="idx">{idx}</span>}</NavLink>;
@@ -42,11 +44,11 @@ export default function AppShell() {
       <div style={{ padding: "4px 8px 14px" }}><Brand /></div>
       <div className="label">Akun saya</div>
       {nav("/app", "Beranda", Home)}{nav("/app/requests/new", "Ajukan kebutuhan", PlusCircle)}{nav("/app/requests", "Request & penawaran", Inbox)}
-      {nav("/app/billing", "Paket & tagihan", CreditCard)}{nav("/app/contributor", "Kontributor", HandHelping)}{nav("/app/notifications", `Notifikasi${notes.data?.unread ? ` (${notes.data.unread})` : ""}`, Bell)}
-      {isStaff && <><div className="label">Command center · 14</div>{WORKSPACES.filter((w) => can(w.perm)).map((w, i) => nav(`/app/w/${w.path}`, w.name, w.icon, String(i + 1).padStart(2, "0")))}</>}
+      {nav("/app/billing", "Paket & tagihan", CreditCard)}{nav("/app/contributor", "Kontributor", HandHelping)}{nav("/app/notifications", `Notifikasi${notes.data?.unread ? ` (${notes.data.unread})` : ""}`, Bell)}{nav("/app/support", "Dukungan", LifeBuoy)}{nav("/app/privacy", "Privasi & data", Lock)}
+      {isStaff && <><div className="label">Operasional</div>{nav("/app/queues", "Antrean operator", ListChecks)}<div className="label">Command center · 14</div>{WORKSPACES.filter((w) => can(w.perm)).map((w, i) => nav(`/app/w/${w.path}`, w.name, w.icon, String(i + 1).padStart(2, "0")))}</>}
       <div className="grow" />
       <div className="card small" style={{ padding: 12, marginTop: 14 }}><div className="row between"><span className="dim">Paket</span><span className="planpill">{me?.plan.name}</span></div>
-        <div className="dim" style={{ marginTop: 6 }}>Request bulan ini: {me?.usage.requests}/{me?.plan.limits.requestsPerMonth}</div></div>
+        <div className="dim" style={{ marginTop: 6 }}>Request periode ini: {me?.usage.requests}/{me?.plan.limits.requestsPerMonth}</div><div className="dim">Reset {me?.window ? new Date(me.window.resetsAt).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "medium" }) : "—"}</div></div>
     </aside>
     <main className="main">
       <header className="topbar"><button className="btn sm menu-btn" aria-label="Buka menu" onClick={() => setOpen(true)}><Menu size={16} /></button>
@@ -60,6 +62,10 @@ export default function AppShell() {
         <Route path="billing" element={<Billing />} />
         <Route path="contributor" element={<ContributorPage />} />
         <Route path="notifications" element={<Notifications />} />
+        <Route path="requests/:id" element={<RequestDetail />} />
+        <Route path="support" element={<SupportPage />} />
+        <Route path="privacy" element={<PrivacyPage />} />
+        <Route path="queues" element={isStaff ? <OpsQueues /> : <Navigate to="/app" replace />} />
         <Route path="missions/:id" element={<MissionDetail />} />
         {WORKSPACES.map((w) => <Route key={w.path} path={`w/${w.path}`} element={can(w.perm) ? <w.el /> : <div className="alert bad">Anda tidak memiliki izin untuk workspace ini.</div>} />)}
         <Route path="*" element={<Navigate to="/app" replace />} />
@@ -67,4 +73,4 @@ export default function AppShell() {
     </main>
   </div>;
 }
-const CUSTOMER_TITLES: [string, string][] = [["", "Beranda"], ["/requests/new", "Ajukan kebutuhan"], ["/requests", "Request & penawaran"], ["/billing", "Paket & tagihan"], ["/contributor", "Kontributor"], ["/notifications", "Notifikasi"]];
+const CUSTOMER_TITLES: [string, string][] = [["", "Beranda"], ["/requests/new", "Ajukan kebutuhan"], ["/support", "Dukungan"], ["/privacy", "Privasi & data"], ["/queues", "Antrean operator"], ["/requests", "Request & penawaran"], ["/billing", "Paket & tagihan"], ["/contributor", "Kontributor"], ["/notifications", "Notifikasi"]];

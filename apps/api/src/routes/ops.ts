@@ -17,7 +17,8 @@ import { audit, auditStatement } from "../services/audit";
 import { recognizeRevenueForOffer } from "../services/payments";
 import { history, transition } from "../services/transitions";
 import { signArtifactToken } from "../services/artifacts";
-import { D, notify, P, page, RID } from "./helpers";
+import { D, notify, notifyOrg, notifyStaff, P, page, RID } from "./helpers";
+import { quoteMargin, quoteSnapshot } from "../domain/journey";
 
 export const ops = new Hono<AppEnv>();
 const RUBRIC = "dayanexa-opportunity-rubric@1";
@@ -188,33 +189,87 @@ ops.patch("/products/:id", requirePermission("catalog:write"), async (c) => {
 });
 ops.get("/offers", requirePermission("workspace:read"), async (c) => c.json({ items: await many(D(c), "SELECT o.*, org.name AS customer_name FROM offers o LEFT JOIN organizations org ON org.id=o.customer_org_id ORDER BY o.created_at DESC LIMIT 200") }));
 ops.get("/customers", requirePermission("workspace:read"), async (c) => c.json({ items: await many(D(c), "SELECT o.id,o.name,o.kind,COUNT(DISTINCT d.id) AS requests FROM organizations o LEFT JOIN demands d ON d.org_id=o.id AND d.origin='customer' GROUP BY o.id ORDER BY o.created_at DESC LIMIT 200") }));
-/** Offers carry transparent scope, deliverables, exclusions, acceptance criteria and refund terms. */
+/** V2 versioned quotes: transparent scope, assumptions, exclusions, acceptance, revisions, refund/dispute, payment terms, expiry. */
+const quoteFields = {
+  title: text(160, 5), scope: text(4000, 20), deliverables: text(3000, 10), exclusions: text(2000, 5), assumptions: optText(2000),
+  acceptanceCriteria: text(2000, 10), refundTerms: text(2000, 10), revisionPolicy: optText(1000), paymentTerms: optText(1000),
+  serviceLayer: z.enum(["project", "managed"]).default("project"), deliveryDays: z.number().int().min(1).max(365), priceMinor: moneyMinor.min(1000),
+  taxMinor: moneyMinor.default(0), validDays: z.number().int().min(1).max(90).default(14), estimatedDirectCostMinor: moneyMinor.default(0), minMarginBps: z.number().int().min(0).max(9000).default(3000),
+};
+const insertQuote = (d: D1Database, id: string, groupId: string, version: number, orgId: string, customerOrgId: string, demandId: string | null, opportunityId: string | null, productId: string | null, q: Record<string, any>, userId: string) =>
+  d.prepare(`INSERT INTO offers (id,org_id,product_id,opportunity_id,demand_id,customer_org_id,quote_group_id,version,title,scope,deliverables,exclusions,assumptions,acceptance_criteria,refund_terms,revision_policy,payment_terms,service_layer,
+      delivery_days,price_minor,tax_minor,currency,status,valid_days,estimated_direct_cost_minor,min_margin_bps,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'IDR','draft',?,?,?,?)`)
+    .bind(id, orgId, productId, opportunityId, demandId, customerOrgId, groupId, version, q.title, q.scope, q.deliverables, q.exclusions, q.assumptions ?? null, q.acceptanceCriteria, q.refundTerms,
+      q.revisionPolicy ?? null, q.paymentTerms ?? null, q.serviceLayer, q.deliveryDays, q.priceMinor, q.taxMinor, q.validDays, q.estimatedDirectCostMinor, q.minMarginBps, userId);
+
 ops.post("/offers", requirePermission("commercial:write"), async (c) => {
   const p = P(c), d = D(c);
-  const input = await body(c, z.object({
-    title: text(160, 5), customerOrgId: text(60, 5), opportunityId: optText(60), productId: optText(60), scope: text(4000, 20), deliverables: text(3000, 10), exclusions: text(2000, 5),
-    acceptanceCriteria: text(2000, 10), refundTerms: text(2000, 10), deliveryDays: z.number().int().min(1).max(365), priceMinor: moneyMinor.min(1000), taxMinor: moneyMinor.default(0), validDays: z.number().int().min(1).max(90).default(14),
-  }));
-  await mustFind(d, "SELECT id FROM organizations WHERE id=? AND status='active'", "CUSTOMER_NOT_FOUND", input.customerOrgId);
+  const input = await body(c, z.object({ ...quoteFields, customerOrgId: optText(60), demandId: optText(60), opportunityId: optText(60), productId: optText(60) }));
+  let customerOrgId = input.customerOrgId;
+  if (input.demandId) {
+    const dem = await mustFind<{ org_id: string; status: string }>(d, "SELECT org_id,status FROM demands WHERE id=?", "DEMAND_NOT_FOUND", input.demandId);
+    if (dem.status !== "DEMAND_VALIDATED") fail(409, "DEMAND_NOT_VALIDATED", "Quotes are issued only for validated demand.");
+    if (customerOrgId && customerOrgId !== dem.org_id) fail(422, "CUSTOMER_MISMATCH");
+    customerOrgId = dem.org_id;
+  }
+  if (!customerOrgId) fail(422, "CUSTOMER_REQUIRED");
+  await mustFind(d, "SELECT id FROM organizations WHERE id=? AND status='active'", "CUSTOMER_NOT_FOUND", customerOrgId);
   const id = newId("ofr");
-  await d.prepare(`INSERT INTO offers (id,org_id,product_id,opportunity_id,customer_org_id,title,scope,deliverables,exclusions,acceptance_criteria,refund_terms,delivery_days,price_minor,tax_minor,currency,status,valid_until,created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'IDR','draft',datetime('now','+'||?||' days'),?)`).bind(id, p.primaryOrgId, input.productId, input.opportunityId, input.customerOrgId, input.title, input.scope, input.deliverables, input.exclusions,
-    input.acceptanceCriteria, input.refundTerms, input.deliveryDays, input.priceMinor, input.taxMinor, input.validDays, p.userId).run();
-  await audit(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.drafted", resourceType: "offer", resourceId: id, metadata: { price: input.priceMinor } });
-  return c.json({ id, status: "draft" }, 201);
+  await insertQuote(d, id, id, 1, p.primaryOrgId, customerOrgId!, input.demandId, input.opportunityId, input.productId, input, p.userId).run();
+  const m = quoteMargin(input.priceMinor, input.estimatedDirectCostMinor);
+  await audit(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.drafted", resourceType: "offer", resourceId: id, metadata: { price: input.priceMinor, version: 1, marginBps: m.bps } });
+  return c.json({ id, version: 1, status: "draft", margin: m }, 201);
 });
-/** External commitment: publishing an offer requires a separate approval by an approval:decide holder. */
+/** New version of an existing quote (any status). Prior published versions are superseded when the new one is published. */
+ops.post("/offers/:id/revise", requirePermission("commercial:write"), async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const base = await mustFind<Record<string, any>>(d, "SELECT * FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
+  if (base.status === "accepted") fail(409, "OFFER_ACCEPTED", "Accepted quotes are final; changes need a new request/contract.");
+  const overrides = await body(c, z.object(Object.fromEntries(Object.entries(quoteFields).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()]))) as z.ZodObject<any>);
+  const cur = { title: base.title, scope: base.scope, deliverables: base.deliverables, exclusions: base.exclusions, assumptions: base.assumptions, acceptanceCriteria: base.acceptance_criteria,
+    refundTerms: base.refund_terms, revisionPolicy: base.revision_policy, paymentTerms: base.payment_terms, serviceLayer: base.service_layer, deliveryDays: base.delivery_days, priceMinor: base.price_minor,
+    taxMinor: base.tax_minor, validDays: base.valid_days, estimatedDirectCostMinor: base.estimated_direct_cost_minor, minMarginBps: base.min_margin_bps };
+  const merged = { ...cur, ...Object.fromEntries(Object.entries(overrides).filter(([, v]) => v !== undefined)) };
+  const max = await one<{ v: number }>(d, "SELECT MAX(version) AS v FROM offers WHERE quote_group_id=?", base.quote_group_id);
+  if (await one(d, "SELECT 1 AS x FROM offers WHERE quote_group_id=? AND status IN ('draft','authorization_pending')", base.quote_group_id)) fail(409, "OPEN_DRAFT_EXISTS", "Finish or withdraw the open draft version first.");
+  const nid = newId("ofr"), version = (max?.v ?? 1) + 1;
+  await insertQuote(d, nid, base.quote_group_id, version, base.org_id, base.customer_org_id, base.demand_id, base.opportunity_id, base.product_id, merged, p.userId).run();
+  await audit(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.revised", resourceType: "offer", resourceId: nid, metadata: { from: id, version } });
+  return c.json({ id: nid, version, status: "draft" }, 201);
+});
+ops.patch("/offers/:id", requirePermission("commercial:write"), async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const input = await body(c, z.object(Object.fromEntries(Object.entries(quoteFields).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()]))) as z.ZodObject<any>);
+  const cols: Record<string, string> = { title: "title", scope: "scope", deliverables: "deliverables", exclusions: "exclusions", assumptions: "assumptions", acceptanceCriteria: "acceptance_criteria", refundTerms: "refund_terms",
+    revisionPolicy: "revision_policy", paymentTerms: "payment_terms", serviceLayer: "service_layer", deliveryDays: "delivery_days", priceMinor: "price_minor", taxMinor: "tax_minor", validDays: "valid_days",
+    estimatedDirectCostMinor: "estimated_direct_cost_minor", minMarginBps: "min_margin_bps" };
+  const sets = Object.entries(input).filter(([k, v]) => v !== undefined && cols[k]);
+  if (!sets.length) fail(400, "NOTHING_TO_UPDATE");
+  const r = await d.prepare(`UPDATE offers SET ${sets.map(([k]) => `${cols[k]}=?`).join(",")} WHERE id=? AND status='draft'`).bind(...sets.map(([, v]) => v), id).run();
+  if (!r.meta.changes) fail(409, "OFFER_NOT_DRAFT", "Only drafts are editable; create a new version.");
+  await audit(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.edited", resourceType: "offer", resourceId: id, metadata: { fields: sets.map(([k]) => k) } });
+  return c.json({ ok: true });
+});
+/** Freezes terms (snapshot + SHA-256) and requests commercial authorization by a different approver. Margin below policy is flagged as an exception. */
 ops.post("/offers/:id/request-publication", requirePermission("commercial:write"), async (c) => {
   const p = P(c), d = D(c), id = idParam(c);
-  const offer = await mustFind<{ status: string; price_minor: number; title: string }>(d, "SELECT status,price_minor,title FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
+  const offer = await mustFind<Record<string, any>>(d, "SELECT * FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
   if (offer.status !== "draft") fail(409, "OFFER_NOT_DRAFT");
+  const m = quoteMargin(offer.price_minor, offer.estimated_direct_cost_minor);
+  const exception = m.bps < offer.min_margin_bps;
+  const { reason } = await body(c, z.object({ reason: optText(1000) }));
+  if (exception && !reason) fail(422, "MARGIN_EXCEPTION_REASON_REQUIRED", `Estimated margin ${m.bps / 100}% is below the ${offer.min_margin_bps / 100}% policy. Provide a reason for the exception.`);
+  const snapshot = quoteSnapshot(offer);
+  const hash = await digestHex("SHA-256", snapshot);
   const aid = newId("apr");
   await d.batch([
-    d.prepare("INSERT INTO approvals (id,action,resource_type,resource_id,payload_json,reason,requested_by) VALUES (?,'offer.publish','offer',?,?,?,?)").bind(aid, id, JSON.stringify({ price: offer.price_minor, title: offer.title }), "Commercial authorization for external offer", p.userId),
-    d.prepare("UPDATE offers SET status='authorization_pending', approval_id=? WHERE id=? AND status='draft'").bind(aid, id),
-    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.publication_requested", resourceType: "offer", resourceId: id }),
+    d.prepare("INSERT INTO approvals (id,action,resource_type,resource_id,payload_json,reason,requested_by) VALUES (?,'offer.publish','offer',?,?,?,?)")
+      .bind(aid, id, JSON.stringify({ title: offer.title, version: offer.version, total: offer.price_minor + offer.tax_minor, estimatedDirectCost: offer.estimated_direct_cost_minor, marginBps: m.bps, minMarginBps: offer.min_margin_bps, marginException: exception, snapshotHash: hash }),
+        reason ?? "Commercial authorization for external quote", p.userId),
+    d.prepare("UPDATE offers SET status='authorization_pending', approval_id=?, snapshot_json=?, snapshot_hash=? WHERE id=? AND status='draft'").bind(aid, snapshot, hash, id),
+    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.publication_requested", resourceType: "offer", resourceId: id, metadata: { snapshotHash: hash, marginBps: m.bps, exception } }),
   ]);
-  return c.json({ approvalId: aid, status: "authorization_pending" });
+  return c.json({ approvalId: aid, status: "authorization_pending", snapshotHash: hash, margin: m, marginException: exception });
 });
 ops.post("/offers/:id/withdraw", requirePermission("commercial:write"), async (c) => {
   const r = await D(c).prepare("UPDATE offers SET status='withdrawn' WHERE id=? AND status IN ('draft','authorization_pending','published')").bind(idParam(c)).run();
@@ -222,23 +277,31 @@ ops.post("/offers/:id/withdraw", requirePermission("commercial:write"), async (c
   await audit(D(c), { requestId: RID(c), actorUserId: P(c).userId, action: "offer.withdrawn", resourceType: "offer", resourceId: c.req.param("id") });
   return c.json({ ok: true });
 });
-/** Customer explicitly accepts published terms (must belong to the customer org). */
+/** Customer explicitly accepts the EXACT published version (snapshot hash must match). */
 ops.post("/offers/:id/accept", async (c) => {
   const p = P(c), d = D(c), id = idParam(c);
-  const { confirmTerms } = await body(c, z.object({ confirmTerms: z.literal(true) }));
-  void confirmTerms;
-  const offer = await mustFind<{ customer_org_id: string; status: string; valid_until: string | null }>(d, "SELECT customer_org_id,status,valid_until FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
+  const { snapshotHash } = await body(c, z.object({ confirmTerms: z.literal(true), snapshotHash: text(64, 64) }));
+  const offer = await mustFind<{ customer_org_id: string; status: string; valid_until: string | null; snapshot_hash: string | null; title: string; version: number }>(d, "SELECT customer_org_id,status,valid_until,snapshot_hash,title,version FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
   if (!p.orgIds.includes(offer.customer_org_id)) fail(404, "OFFER_NOT_FOUND");
   if (offer.status !== "published") fail(409, "OFFER_NOT_OPEN");
+  if (!offer.snapshot_hash || offer.snapshot_hash !== snapshotHash) fail(409, "QUOTE_VERSION_MISMATCH", "The quote you reviewed is not the current published version. Reload and review again.");
   if (offer.valid_until && Date.parse(offer.valid_until.replace(" ", "T") + "Z") < Date.now()) {
-    await d.prepare("UPDATE offers SET status='expired' WHERE id=?").bind(id).run();
+    await d.prepare("UPDATE offers SET status='expired' WHERE id=? AND status='published'").bind(id).run();
     fail(409, "OFFER_EXPIRED");
   }
   await d.batch([
-    d.prepare("UPDATE offers SET status='accepted', accepted_by=?, accepted_at=datetime('now') WHERE id=? AND status='published'").bind(p.userId, id),
-    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.accepted", resourceType: "offer", resourceId: id, orgId: offer.customer_org_id }),
+    d.prepare("UPDATE offers SET status='accepted', accepted_by=?, accepted_at=datetime('now'), accepted_snapshot_hash=? WHERE id=? AND status='published'").bind(p.userId, snapshotHash, id),
+    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "offer.accepted", resourceType: "offer", resourceId: id, orgId: offer.customer_org_id, metadata: { version: offer.version, snapshotHash } }),
   ]);
+  await notifyStaff(d, "offer.accepted", "Penawaran diterima pelanggan", `${offer.title} (v${offer.version})`, "/app/w/commercial");
   return c.json({ ok: true, status: "accepted", next: "Payment is a separate step. Payment success does not mean delivery or acceptance." });
+});
+ops.get("/offers/:id/versions", async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const o = await mustFind<{ quote_group_id: string; customer_org_id: string }>(d, "SELECT quote_group_id,customer_org_id FROM offers WHERE id=?", "OFFER_NOT_FOUND", id);
+  assertOrgAccess(p, o.customer_org_id);
+  const staff = can(p, "workspace:read");
+  return c.json({ items: await many(d, `SELECT id,version,status,price_minor,tax_minor,snapshot_hash,published_at,accepted_at,superseded_by,created_at FROM offers WHERE quote_group_id=? ${staff ? "" : "AND status IN ('published','accepted','expired','withdrawn')"} ORDER BY version DESC`, o.quote_group_id) });
 });
 
 // ---------- Agent Workforce ----------
@@ -326,11 +389,16 @@ ops.post("/missions/:id/tasks", requirePermission("mission:write"), async (c) =>
   return c.json({ id: tid }, 201);
 });
 ops.patch("/tasks/:id", requirePermission("mission:write"), async (c) => {
-  const { status } = await body(c, z.object({ status: z.enum(["todo", "in_progress", "review", "done", "blocked", "cancelled"]) }));
+  const { status, note } = await body(c, z.object({ status: z.enum(["todo", "in_progress", "review", "done", "blocked", "cancelled"]), note: optText(2000) }));
   const d = D(c), id = idParam(c);
   const task = await mustFind<{ status: string; executor_type: string; assignee_user_id: string | null; compensation_minor: number; mission_id: string }>(d, "SELECT status,executor_type,assignee_user_id,compensation_minor,mission_id FROM tasks WHERE id=?", "TASK_NOT_FOUND", id);
   if (task.status === "done" || task.status === "cancelled") fail(409, "TASK_CLOSED");
-  await d.prepare("UPDATE tasks SET status=?, updated_at=datetime('now') WHERE id=?").bind(status, id).run();
+  if (status === "done" && task.executor_type === "human" && task.assignee_user_id && task.compensation_minor > 0) {
+    const t2 = await one<{ contributor_decision: string | null }>(d, "SELECT contributor_decision FROM tasks WHERE id=?", id);
+    if (t2?.contributor_decision !== "accepted") fail(409, "CONTRIBUTOR_NOT_ACCEPTED", "The contributor must accept scope and compensation before work can be accepted.");
+  }
+  await d.prepare("UPDATE tasks SET status=?, review_note=COALESCE(?,review_note), updated_at=datetime('now') WHERE id=?").bind(status, note, id).run();
+  if (task.assignee_user_id && (status === "done" || (task.status === "review" && status === "in_progress"))) await notify(d, task.assignee_user_id, "task.reviewed", status === "done" ? "Hasil kerja diterima — payable dicatat" : "Revisi diminta", note, "/app/contributor");
   const extra: string[] = [];
   if (status === "done" && task.executor_type === "human" && task.assignee_user_id && task.compensation_minor > 0) {
     // Accepted contributor work creates a contractual payable (not a payout). Payout is a separate, approved step.
@@ -358,8 +426,7 @@ ops.post("/missions/:id/deliver", requirePermission("delivery:write"), async (c)
   await transition(d, { entity: "mission", id, to: "DELIVERED", map: MISSION_TRANSITIONS, actorUserId: p.userId, reason: "Delivered to customer", requestId: RID(c),
     extraSql: [d.prepare("INSERT INTO deliveries (id,mission_id,delivery_note,status,delivered_by) VALUES (?,?,?,'awaiting_acceptance',?)").bind(newId("dlv"), id, note, p.userId)] });
   await transition(d, { entity: "mission", id, to: "AWAITING_ACCEPTANCE", map: MISSION_TRANSITIONS, actorUserId: p.userId, reason: "Awaiting customer acceptance", requestId: RID(c) });
-  const members = await many<{ user_id: string }>(d, "SELECT user_id FROM memberships WHERE org_id=?", mission.org_id);
-  for (const m of members) await notify(d, m.user_id, "delivery.ready", "Delivery ready for your review", mission.title, "/app/requests");
+  await notifyOrg(d, mission.org_id, "delivery.ready", "Hasil kerja siap ditinjau", mission.title, `/app/missions/${id}`);
   return c.json({ ok: true, status: "AWAITING_ACCEPTANCE" });
 });
 /** Customer acceptance or dispute. Acceptance + verified payment → revenue recognition. */

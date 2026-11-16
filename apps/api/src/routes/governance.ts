@@ -12,7 +12,8 @@ import { GatewayError } from "../payments/types";
 import { audit, auditStatement } from "../services/audit";
 import { inferenceStatus } from "../inference/service";
 import { providerRegistry } from "../providers/registry";
-import { D, notify, P, page, RID } from "./helpers";
+import { D, notify, notifyOrg, P, page, RID } from "./helpers";
+import { applyPaymentStatus, type IntentRow } from "../services/payments";
 
 export const governance = new Hono<AppEnv>();
 
@@ -30,8 +31,20 @@ governance.post("/approvals/:id/decide", requirePermission("approval:decide"), a
   const decide = d.prepare("UPDATE approvals SET status=?, decided_by=?, decision_note=?, decided_at=datetime('now') WHERE id=? AND status='pending'").bind(input.decision, p.userId, input.note, id);
   const effects: D1PreparedStatement[] = [];
   let sideNote: string | null = null;
+  let manualPayment: { intentId: string; target: string } | null = null;
   if (a.action === "offer.publish") {
-    effects.push(d.prepare(`UPDATE offers SET status=? WHERE id=? AND status='authorization_pending'`).bind(input.decision === "approved" ? "published" : "draft", a.resource_id));
+    if (input.decision === "approved") {
+      const o = await one<{ quote_group_id: string; valid_days: number }>(d, "SELECT quote_group_id,valid_days FROM offers WHERE id=?", a.resource_id);
+      effects.push(d.prepare("UPDATE offers SET status='published', published_at=datetime('now'), valid_until=datetime('now','+'||?||' days') WHERE id=? AND status='authorization_pending'").bind(o?.valid_days ?? 14, a.resource_id));
+      // Supersede earlier open versions of the same quote: only one version can be accepted.
+      effects.push(d.prepare("UPDATE offers SET status='withdrawn', superseded_by=? WHERE quote_group_id=? AND id!=? AND status='published'").bind(a.resource_id, o?.quote_group_id ?? "-", a.resource_id));
+    } else {
+      // Rejected: terms stay frozen (immutable); the commercial owner must create a new version.
+      effects.push(d.prepare("UPDATE offers SET status='withdrawn' WHERE id=? AND status='authorization_pending'").bind(a.resource_id));
+    }
+  } else if (a.action === "payment.manual_resolution") {
+    const pl = JSON.parse(a.payload_json || "{}") as { target?: string };
+    if (input.decision === "approved" && pl.target) manualPayment = { intentId: a.resource_id, target: pl.target };
   } else if (a.action === "payout.release") {
     effects.push(d.prepare("UPDATE payout_requests SET status=?, updated_at=datetime('now') WHERE id=? AND status='approval_pending'").bind(input.decision === "approved" ? "approved" : "rejected", a.resource_id));
   } else if (a.action === "refund.submit") {
@@ -55,6 +68,14 @@ governance.post("/approvals/:id/decide", requirePermission("approval:decide"), a
         sideNote = `Refund not executed: ${error instanceof GatewayError ? error.message : "gateway error"}. Handle manually.`;
       }
     }
+  }
+  if (manualPayment) {
+    const intent = await one<IntentRow>(d, "SELECT * FROM payment_intents WHERE id=?", manualPayment.intentId);
+    if (intent) { const r = await applyPaymentStatus(d, intent, manualPayment.target, { actor: p.userId, requestId: RID(c), source: "approved_manual_resolution", note: input.note }); sideNote = r.applied ? `Payment set to ${r.status}.` : `Transition ${intent.status} → ${manualPayment.target} not allowed.`; }
+  }
+  if (a.action === "offer.publish" && input.decision === "approved") {
+    const o = await one<{ customer_org_id: string; title: string; version: number; demand_id: string | null }>(d, "SELECT customer_org_id,title,version,demand_id FROM offers WHERE id=?", a.resource_id);
+    if (o) await notifyOrg(d, o.customer_org_id, "quote.published", `Penawaran baru: ${o.title} (v${o.version})`, "Tinjau ruang lingkup, harga dan syarat sebelum menyetujui.", o.demand_id ? `/app/requests/${o.demand_id}` : "/app/requests");
   }
   await notify(d, a.requested_by, "approval.decided", `Approval ${input.decision}: ${a.action}`, input.note, null);
   return c.json({ ok: true, decision: input.decision, note: sideNote });
@@ -128,4 +149,40 @@ governance.get("/ai/status", requirePermission("workspace:read"), async (c) => {
       SUM(CASE WHEN day=date('now') THEN 1 ELSE 0 END) AS calls_today FROM inference_traces WHERE provider_id='workers-ai'`);
   const traces = await many(d, "SELECT id,provider_id,model_id,task_profile,prompt_version,policy_decision,status,error_code,input_chars,output_chars,input_tokens,output_tokens,estimated_neurons,usage_estimated,latency_ms,created_at FROM inference_traces ORDER BY created_at DESC LIMIT 50");
   return c.json({ status: inferenceStatus(c.env), totals, traces });
+});
+
+// ---------- Support & privacy queues ----------
+governance.get("/support/queue", requirePermission("workspace:read"), async (c) => {
+  const status = c.req.query("status") ?? "open";
+  return c.json({ items: await many(D(c), "SELECT t.*, u.email, u.display_name, o.name AS org_name FROM support_tickets t JOIN users u ON u.id=t.user_id JOIN organizations o ON o.id=t.org_id WHERE t.status=? ORDER BY t.created_at LIMIT 200", status) });
+});
+governance.post("/support/:id/reply", requirePermission("workspace:read"), async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const { reply, close } = await body(c, z.object({ reply: text(4000, 3), close: z.boolean().default(false) }));
+  const t = await mustFind<{ user_id: string; subject: string }>(d, "SELECT user_id,subject FROM support_tickets WHERE id=?", "TICKET_NOT_FOUND", id);
+  await d.batch([
+    d.prepare("UPDATE support_tickets SET staff_reply=?, replied_by=?, replied_at=datetime('now'), status=?, updated_at=datetime('now') WHERE id=?").bind(reply, p.userId, close ? "closed" : "answered", id),
+    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "support.replied", resourceType: "support_ticket", resourceId: id }),
+  ]);
+  await notify(d, t.user_id, "support.reply", `Balasan dukungan: ${t.subject}`, reply.slice(0, 200), "/app/support");
+  return c.json({ ok: true });
+});
+governance.get("/privacy/queue", requirePermission("roles:manage"), async (c) => c.json({ items: await many(D(c), "SELECT r.*, u.email, u.display_name FROM privacy_requests r JOIN users u ON u.id=r.user_id WHERE r.kind='delete' ORDER BY r.created_at DESC LIMIT 200") }));
+/** Deletion: anonymize profile; retain financial/audit records required by law. Clerk account deletion is a separate owner action in Clerk. */
+governance.post("/privacy/:id/decide", requirePermission("roles:manage"), async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const { decision, note } = await body(c, z.object({ decision: z.enum(["completed", "rejected"]), note: text(1000, 3) }));
+  const r = await mustFind<{ user_id: string; status: string }>(d, "SELECT user_id,status FROM privacy_requests WHERE id=? AND kind='delete'", "PRIVACY_REQUEST_NOT_FOUND", id);
+  if (!["received", "in_review"].includes(r.status)) fail(409, "PRIVACY_REQUEST_CLOSED");
+  if (r.user_id === p.userId) fail(403, "SELF_APPROVAL_FORBIDDEN");
+  const stmts = [d.prepare("UPDATE privacy_requests SET status=?, note=COALESCE(note,'')||' | '||?, handled_by=?, completed_at=datetime('now') WHERE id=?").bind(decision, note, p.userId, id)];
+  if (decision === "completed") {
+    stmts.push(d.prepare("UPDATE users SET status='closed', email=NULL, display_name=NULL, deleted_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(r.user_id));
+    stmts.push(d.prepare("DELETE FROM request_drafts WHERE user_id=?").bind(r.user_id));
+    stmts.push(d.prepare("DELETE FROM notifications WHERE user_id=?").bind(r.user_id));
+    stmts.push(d.prepare("UPDATE contributor_profiles SET headline='[deleted]', skills='[deleted]', status='suspended' WHERE user_id=?").bind(r.user_id));
+  }
+  stmts.push(auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: `privacy.delete_${decision}`, resourceType: "user", resourceId: r.user_id }));
+  await d.batch(stmts);
+  return c.json({ ok: true, note: decision === "completed" ? "Profile anonymized. Delete the Clerk user in the Clerk dashboard to revoke sign-in." : null });
 });

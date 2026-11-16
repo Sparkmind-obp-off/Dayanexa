@@ -8,6 +8,7 @@ import { gateways, liveEnabled } from "../payments/registry";
 import type { GatewayId } from "../payments/types";
 import { GatewayError } from "../payments/types";
 import { audit, auditStatement } from "./audit";
+import { invoiceStatement } from "./invoices";
 
 export interface SubRow { id: string; plan_code: PlanCode; status: string; current_period_start: string | null; current_period_end: string | null; cancel_at_period_end: number }
 
@@ -18,17 +19,14 @@ export async function currentSubscription(d: D1Database, orgId: string) {
   return { subscription: row ?? null, plan: planByCode(row?.plan_code ?? "free") };
 }
 
+/** @deprecated V1 helpers kept as thin wrappers over the V2 entitlement window (services/entitlements.ts). */
 export async function usageThisMonth(d: D1Database, orgId: string) {
-  const r = await d.prepare(`SELECT
-      (SELECT COUNT(*) FROM demands WHERE org_id=? AND origin='customer' AND created_at >= datetime('now','start of month')) AS requests,
-      (SELECT COUNT(*) FROM inference_traces WHERE org_id=? AND status='success' AND created_at >= datetime('now','start of month')) AS ai`).bind(orgId, orgId).first<{ requests: number; ai: number }>();
-  return { requests: r?.requests ?? 0, aiAssists: r?.ai ?? 0 };
+  const { entitlements } = await import("./entitlements");
+  return (await entitlements(d, orgId)).usage;
 }
-
 export async function assertRequestQuota(d: D1Database, orgId: string) {
-  const { plan } = await currentSubscription(d, orgId);
-  const usage = await usageThisMonth(d, orgId);
-  if (usage.requests >= plan.limits.requestsPerMonth) fail(402, "PLAN_LIMIT_REACHED", `Paket ${plan.name} mengizinkan ${plan.limits.requestsPerMonth} permintaan per bulan. Upgrade paket untuk menambah kuota.`);
+  const { assertEntitlement } = await import("./entitlements");
+  await assertEntitlement(d, orgId, "request");
 }
 
 /** Subscribe: Free activates immediately; paid plans create a payment intent (amount from server plan table). */
@@ -73,14 +71,15 @@ export async function subscribe(env: Env, d: D1Database, p: Principal, args: { p
       VALUES (?,?,?,NULL,?,?,?,?,?,?,'IDR',?,'PENDING',?,?,'subscription',?)`).bind(intentId, orgId, p.userId, live ? args.provider : "mock", live ? "live" : "mock", orderId, providerTx, reference, plan.priceMonthly,
       `DAYANEXA ${plan.name}`, checkoutUrl, args.idempotencyKey, plan.code),
     d.prepare("INSERT INTO subscriptions (id,org_id,user_id,plan_code,status,payment_intent_id) VALUES (?,?,?,?,'pending',?)").bind(subId, orgId, p.userId, plan.code, intentId),
+    invoiceStatement(d, { orgId, kind: "subscription", subscriptionId: subId, paymentIntentId: intentId, description: `DAYANEXA ${plan.name} — akses ${plan.periodDays} hari (tanpa perpanjangan otomatis)`, subtotal: plan.priceMonthly, tax: 0, mode: live ? "live" : "mock" }),
     auditStatement(d, { requestId: args.requestId, actorUserId: p.userId, action: "subscription.checkout_created", resourceType: "subscription", resourceId: subId, orgId, metadata: { plan: plan.code, mode: live ? "live" : "mock", amount: plan.priceMonthly } }),
   ]);
   return { id: intentId, subscriptionId: subId, plan: plan.code, amount: plan.priceMonthly, status: "PENDING", mode: live ? "live" : "mock", checkoutUrl,
-    notice: live ? null : "MODE MOCK — tidak ada tagihan nyata. Langganan berbayar aktif hanya setelah pembayaran live terverifikasi oleh gateway." };
+    notice: live ? null : "MODE UJI — tidak ada tagihan nyata. Langganan berbayar aktif hanya setelah pembayaran terverifikasi gateway." };
 }
 
 /** Called after a VERIFIED live subscription payment. Access granted = delivery → revenue recognized. */
-export async function activateSubscriptionForIntent(d: D1Database, intent: { id: string; amount: number; merchant_order_id: string; org_id: string }) {
+export async function activateSubscriptionForIntent(d: D1Database, intent: { id: string; amount: number; merchant_order_id: string; org_id: string; mode?: string }) {
   const sub = await d.prepare("SELECT id,plan_code FROM subscriptions WHERE payment_intent_id=?").bind(intent.id).first<{ id: string; plan_code: string }>();
   if (!sub) return;
   const plan = planByCode(sub.plan_code);
@@ -88,6 +87,7 @@ export async function activateSubscriptionForIntent(d: D1Database, intent: { id:
     d.prepare("UPDATE subscriptions SET status='canceled', updated_at=datetime('now') WHERE org_id=? AND status='active' AND id!=?").bind(intent.org_id, sub.id),
     d.prepare(`UPDATE subscriptions SET status='active', current_period_start=datetime('now'), current_period_end=datetime('now','+'||?||' days'), updated_at=datetime('now') WHERE id=? AND status='pending'`).bind(plan.periodDays, sub.id),
   ]);
-  await postJournal(d, { sourceType: "subscription_revenue", sourceId: intent.id, description: `Subscription ${plan.name} activated (${intent.merchant_order_id})`,
-    lines: [{ accountId: "acct-unearned-revenue", direction: "debit", amount: intent.amount }, { accountId: "acct-platform-revenue", direction: "credit", amount: intent.amount }] });
+  // Access is delivered on activation → recognize subscription revenue (separate account from project revenue).
+  await postJournal(d, { sourceType: "subscription_revenue", sourceId: intent.id, description: `${intent.mode === "live" ? "" : "[SANDBOX] "}Subscription ${plan.name} activated (${intent.merchant_order_id})`,
+    lines: [{ accountId: "acct-unearned-revenue", direction: "debit", amount: intent.amount }, { accountId: "acct-subscription-revenue", direction: "credit", amount: intent.amount }] });
 }

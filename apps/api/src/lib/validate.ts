@@ -7,7 +7,7 @@ export async function body<T extends z.ZodTypeAny>(c: Context, schema: T): Promi
   try { raw = await c.req.json(); } catch { fail(400, "INVALID_JSON"); }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) fail(400, "VALIDATION_FAILED", "Request body failed validation.", parsed.error.flatten());
-  return parsed.data;
+  return parsed.data as z.infer<T>;
 }
 export const text = (max: number, min = 1) => z.string().trim().min(min).max(max);
 export const optText = (max: number) => z.string().trim().max(max).optional().nullable().transform((v) => v || null);

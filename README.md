@@ -52,6 +52,31 @@ Secret lokal: salin `.dev.vars.example` → `.dev.vars`.
 6. **Pembayaran**: tetap `PAYMENTS_MODE=mock` dan `PAYMENT_LIVE_ENABLED=false`; uji sandbox terlebih dahulu. Live hanya setelah approval owner.
 7. **Groq**: tetap nonaktif kecuali owner mengizinkan (`GROQ_ENABLED=true`).
 
+## V2 — status per fase (16 Nov 2026)
+
+### Fase 1 — Auth & integritas rilis
+- `@clerk/react` 6.18.x (Core 3) + `@clerk/backend` 2.33.9; paket lama `@clerk/clerk-react` tidak ada di dependency tree. `package-lock.json` di-commit; `npm ci` jadi reproducible.
+- Clerk Production terverifikasi lewat Frontend API publik: instance `production`, **hanya `oauth_google`** (password/email/passkey/web3 off). Kunci JWT yang tersimpan cocok dengan JWKS.
+- Server: Google-only ditegakkan saat provisioning, owner bootstrap hanya untuk email terverifikasi di allowlist, sekali saja, dan diaudit.
+- `npm audit --omit=dev`: 0 kerentanan (react-router-dom 7, zod 4).
+- Deploy: BYOK lewat wrangler (proyek Pages tanpa koneksi Git; setiap deploy dicatat dengan commit hash).
+
+### Fase 2 — Journey
+- **Pelanggan**: onboarding dengan persetujuan syarat/privasi berversi → draft request yang bisa disimpan dan dilanjutkan → tanda terima + SLA → detail request (ID, status, **aksi berikutnya + penanggung jawab**, linimasa, versi penawaran, pembayaran, invoice, misi, dukungan) → menyetujui **versi penawaran persis** (sidik SHA-256) → bayar → menerima/menyengketakan hasil → ekspor data / permintaan hapus.
+- **Kontributor**: daftar → diverifikasi → melihat kompensasi **sebelum** menerima → terima/tolak → kirim hasil → review/revisi → payable di ledger → payout disetujui → dibayar (dengan referensi transfer). Penghasilan hanya dihitung dari ledger.
+- **Operator**: `/app/queues` berisi 17 antrean (intake, bukti, penawaran, persetujuan, pengecualian pembayaran, dibayar-tanpa-misi, tugas terblokir/terkirim, QA, sengketa, refund, payout, dukungan, privasi, kontributor). Resolusi manual pembayaran memakai maker-checker.
+
+### Fase 3 — Monetisasi & integritas ekonomi
+- Satu window entitlement (periode langganan, atau siklus 30 hari bergulir untuk Free) dipakai **UI dan API**; tabel `usage_events` menggantikan hitungan bulan kalender. Kuota AI ditegakkan di server dan dihitung hanya saat sukses.
+- Penawaran berversi dan **immutable** (trigger DB) setelah diajukan; harga dari server; cek margin dengan pengecualian beralasan; versi lama otomatis tergantikan.
+- Invoice terpisah: `subscription` / `project` / `managed`. Ledger memisahkan pajak terutang, pendapatan langganan, pendapatan proyek, dan pendapatan managed; checkout bruto ≠ pendapatan.
+- Satu jalur `applyPaymentStatus` untuk webhook, rekonsiliasi, resolusi manual yang disetujui, dan simulator sandbox (simulator **dimatikan di produksi**, hanya untuk intent mock).
+- Tes integrasi menjalankan alur uang sandbox end-to-end di atas migrasi asli: penawaran → intent+invoice → pembayaran terverifikasi → penerimaan → pendapatan; pajak terpisah; ledger seimbang; idempotensi; event yang datang tidak berurutan diabaikan.
+- Pembayaran live tetap terkunci (`PAYMENTS_MODE=mock`, `PAYMENT_LIVE_ENABLED=false`).
+
+### Fase 4 — belum selesai (lihat checklist owner)
+Pilot terbatas, backup/restore D1, runbook insiden, review legal, benchmark Apify vs Scrape.ly, orkestrasi durable (Queues/Workflows).
+
 ## Status (pemeriksaan 16 November 2026)
 - Clerk frontend source sudah dimigrasikan ke `@clerk/react` Core 3; login Google Production belum dibuktikan berhasil pada deployment aktif.
 - `package-lock.json` belum ada pada tree `main` saat pemeriksaan; regenerasi dengan clean install dan commit sebelum CI.

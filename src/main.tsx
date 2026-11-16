@@ -16,7 +16,7 @@ if (!publishableKey) {
   root.render(
     <React.StrictMode>
       <ClerkProvider publishableKey={publishableKey} afterSignOutUrl="/" signInFallbackRedirectUrl="/app" signUpFallbackRedirectUrl="/app"
-        appearance={{ variables: { colorPrimary: "#7aa2ff", colorBackground: "#0f1729", colorText: "#e9edf8", colorInputBackground: "#0b1120", colorInputText: "#e9edf8", borderRadius: "10px" } }}>
+        appearance={{ variables: { colorPrimary: "#7aa2ff", colorBackground: "#0f1729", colorForeground: "#e9edf8", colorInput: "#0b1120", colorInputForeground: "#e9edf8", colorMutedForeground: "#9aa6c2", borderRadius: "10px" } }}>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter><App /></BrowserRouter>
         </QueryClientProvider>

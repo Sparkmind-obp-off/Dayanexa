@@ -11,7 +11,7 @@ import { body, idParam, moneyMinor, optText, text } from "../lib/validate";
 import { paymentRegistry } from "../payments/registry";
 import { GATEWAY_IDS } from "../payments/types";
 import { audit, auditStatement } from "../services/audit";
-import { createIntent, reconcileIntent } from "../services/payments";
+import { applyPaymentStatus, createIntent, isProductionEnv, reconcileIntent, type IntentRow } from "../services/payments";
 import { D, P, page, RID } from "./helpers";
 
 export const commerce = new Hono<AppEnv>();
@@ -132,4 +132,76 @@ commerce.get("/economics/missions", requirePermission("ledger:read"), async (c) 
     return { ...r, recognized_revenue: recognized, gross_margin: recognized ? recognized - Number(r.direct_costs) : null };
   }) });
 });
-void one;
+
+// ---------- V2: sandbox simulator, maker-checker payment resolution, operator queues ----------
+/**
+ * Sandbox webhook simulator for MOCK intents only, and only when APP_ENV is not production.
+ * Exercises the same applyPaymentStatus path (ledger, invoice, subscription activation) with [SANDBOX] journals.
+ */
+commerce.post("/payments/intents/:id/simulate", requirePermission("ledger:write"), async (c) => {
+  if (isProductionEnv(c.env)) fail(403, "SIMULATOR_DISABLED_IN_PRODUCTION");
+  const p = P(c), d = D(c), id = idParam(c);
+  const { status } = await body(c, z.object({ status: z.enum(["SUCCEEDED", "FAILED", "EXPIRED", "RECONCILIATION_REQUIRED"]) }));
+  const intent = await mustFind<IntentRow>(d, "SELECT * FROM payment_intents WHERE id=?", "PAYMENT_NOT_FOUND", id);
+  if (intent.mode !== "mock") fail(409, "LIVE_INTENT", "The simulator never touches live intents.");
+  return c.json(await applyPaymentStatus(d, intent, status, { actor: p.userId, requestId: RID(c), source: "sandbox_simulator" }));
+});
+/** Payment exception handling: finance requests a manual resolution; a DIFFERENT approver decides (governance approvals). */
+commerce.post("/payments/intents/:id/manual-resolution", requirePermission("ledger:write"), async (c) => {
+  const p = P(c), d = D(c), id = idParam(c);
+  const input = await body(c, z.object({ target: z.enum(["SUCCEEDED", "FAILED", "EXPIRED"]), evidence: text(2000, 10) }));
+  const intent = await mustFind<{ status: string; amount: number; merchant_order_id: string }>(d, "SELECT status,amount,merchant_order_id FROM payment_intents WHERE id=?", "PAYMENT_NOT_FOUND", id);
+  if (!["RECONCILIATION_REQUIRED", "PENDING"].includes(intent.status)) fail(409, "NOT_AN_EXCEPTION", "Only pending or reconciliation-required payments can be resolved manually.");
+  if (await one(d, "SELECT 1 AS x FROM approvals WHERE action='payment.manual_resolution' AND resource_id=? AND status='pending'", id)) fail(409, "RESOLUTION_PENDING");
+  const aid = newId("apr");
+  await d.batch([
+    d.prepare("INSERT INTO approvals (id,action,resource_type,resource_id,payload_json,reason,requested_by) VALUES (?,'payment.manual_resolution','payment_intent',?,?,?,?)")
+      .bind(aid, id, JSON.stringify({ target: input.target, from: intent.status, amount: intent.amount, order: intent.merchant_order_id }), input.evidence, p.userId),
+    auditStatement(d, { requestId: RID(c), actorUserId: p.userId, action: "payment.manual_resolution_requested", resourceType: "payment_intent", resourceId: id, metadata: { target: input.target } }),
+  ]);
+  return c.json({ approvalId: aid, status: "approval_pending" }, 201);
+});
+commerce.get("/invoices", requirePermission("ledger:read"), async (c) => c.json({ items: await many(D(c), "SELECT i.*, o.name AS org_name FROM invoices i JOIN organizations o ON o.id=i.org_id ORDER BY i.issued_at DESC LIMIT 200") }));
+
+/** Operator queues: every state has a responsible actor and next action. */
+commerce.get("/ops/queues", requirePermission("workspace:read"), async (c) => {
+  const d = D(c);
+  const [intake, evidence, quoteReady, quotesPending, approvals, paymentExceptions, paidNoMission, blockedTasks, submittedTasks, qa, awaitingAcceptance, disputes, refunds, payouts, support, privacy, contributors] = await Promise.all([
+    many(d, "SELECT id,title,urgency,created_at FROM demands WHERE origin='customer' AND status='DEMAND_HYPOTHESIS_CREATED' ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT id,title,created_at FROM demands WHERE status='DEMAND_EVIDENCE_PENDING' ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT dm.id,dm.title,dm.validated_at FROM demands dm WHERE dm.status='DEMAND_VALIDATED' AND dm.origin='customer' AND NOT EXISTS (SELECT 1 FROM offers o WHERE o.demand_id=dm.id AND o.status IN ('draft','authorization_pending','published','accepted')) LIMIT 50"),
+    many(d, "SELECT id,title,version,status,created_at FROM offers WHERE status IN ('draft','authorization_pending') ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT id,action,resource_type,resource_id,created_at FROM approvals WHERE status='pending' ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT id,merchant_order_id,provider,mode,amount,status,created_at FROM payment_intents WHERE status='RECONCILIATION_REQUIRED' OR (status='PENDING' AND created_at < datetime('now','-1 day')) ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT o.id,o.title,pi.mode,pi.verified_at FROM offers o JOIN payment_intents pi ON pi.offer_id=o.id AND pi.status='SUCCEEDED' WHERE o.status='accepted' AND NOT EXISTS (SELECT 1 FROM missions m WHERE m.offer_id=o.id AND m.status NOT IN ('CANCELLED','FAILED')) LIMIT 50"),
+    many(d, "SELECT t.id,t.title,m.title AS mission_title FROM tasks t JOIN missions m ON m.id=t.mission_id WHERE t.status='blocked' LIMIT 50"),
+    many(d, "SELECT t.id,t.title,t.submission_note,t.mission_id,m.title AS mission_title FROM tasks t JOIN missions m ON m.id=t.mission_id WHERE t.status='review' LIMIT 50"),
+    many(d, "SELECT id,title FROM missions WHERE status='QUALITY_REVIEW' LIMIT 50"),
+    many(d, "SELECT id,title,updated_at FROM missions WHERE status='AWAITING_ACCEPTANCE' LIMIT 50"),
+    many(d, "SELECT ds.id,ds.reason,m.title AS mission_title,ds.created_at FROM disputes ds LEFT JOIN missions m ON m.id=ds.mission_id WHERE ds.status='open' LIMIT 50"),
+    many(d, "SELECT id,amount,status,created_at FROM refunds WHERE status IN ('approval_pending','approved','failed') LIMIT 50"),
+    many(d, "SELECT id,amount,status FROM payout_requests WHERE status IN ('approval_pending','approved') LIMIT 50"),
+    many(d, "SELECT id,subject,created_at FROM support_tickets WHERE status='open' ORDER BY created_at LIMIT 50"),
+    many(d, "SELECT id,kind,created_at FROM privacy_requests WHERE kind='delete' AND status IN ('received','in_review') LIMIT 50"),
+    many(d, "SELECT user_id,headline,created_at FROM contributor_profiles WHERE status='pending' LIMIT 50"),
+  ]);
+  return c.json({ queues: [
+    { key: "intake", label: "Intake request baru", owner: "operator", link: "/app/w/demand", items: intake },
+    { key: "evidence", label: "Validasi bukti", owner: "analyst", link: "/app/w/demand", items: evidence },
+    { key: "quote_needed", label: "Tervalidasi — perlu penawaran", owner: "operator", link: "/app/w/commercial", items: quoteReady },
+    { key: "quotes", label: "Penawaran draft / menunggu otorisasi", owner: "operator", link: "/app/w/commercial", items: quotesPending },
+    { key: "approvals", label: "Persetujuan (maker-checker)", owner: "owner", link: "/app/w/governance", items: approvals },
+    { key: "payment_exceptions", label: "Pengecualian pembayaran", owner: "finance", link: "/app/w/ledger", items: paymentExceptions },
+    { key: "paid_no_mission", label: "Dibayar — misi belum direncanakan", owner: "operator", link: "/app/w/execution", items: paidNoMission },
+    { key: "blocked", label: "Tugas terblokir", owner: "operator", link: "/app/w/execution", items: blockedTasks },
+    { key: "submitted", label: "Hasil kontributor menunggu review", owner: "operator", link: "/app/w/execution", items: submittedTasks },
+    { key: "qa", label: "Quality review misi", owner: "operator", link: "/app/w/delivery", items: qa },
+    { key: "acceptance", label: "Menunggu penerimaan pelanggan", owner: "customer", link: "/app/w/delivery", items: awaitingAcceptance },
+    { key: "disputes", label: "Sengketa terbuka", owner: "owner", link: "/app/w/delivery", items: disputes },
+    { key: "refunds", label: "Refund", owner: "finance", link: "/app/w/ledger", items: refunds },
+    { key: "payouts", label: "Payout kontributor", owner: "finance", link: "/app/w/ledger", items: payouts },
+    { key: "support", label: "Tiket dukungan", owner: "operator", link: "/app/w/governance", items: support },
+    { key: "privacy", label: "Permintaan penghapusan data", owner: "owner", link: "/app/w/governance", items: privacy },
+    { key: "contributors", label: "Aplikasi kontributor", owner: "owner", link: "/app/w/governance", items: contributors },
+  ] });
+});

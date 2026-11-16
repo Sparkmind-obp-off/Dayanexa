@@ -1,7 +1,7 @@
 {
   "name": "dayanexa",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev:web": "vite --host 0.0.0.0",
@@ -12,23 +12,24 @@
     "test": "vitest run",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "ci": "npm run typecheck && npm run test && npm run check:migrations && npm run check:secrets && npm run build",
+    "ci": "npm run typecheck && npm test && npm run check:migrations && npm run check:secrets && npm run audit && npm run build",
     "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
     "db:migrate:local": "wrangler d1 migrations apply dayanexa-production --local",
     "db:migrate:prod": "wrangler d1 migrations apply dayanexa-production --remote",
     "deploy": "npm run build && wrangler pages deploy dist --project-name dayanexa --branch main",
-    "check": "npm run typecheck && npm test && npm run check:migrations && npm run check:secrets"
+    "check": "npm run typecheck && npm test && npm run check:migrations && npm run check:secrets",
+    "audit": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@clerk/backend": "^2.33.9",
+    "@clerk/react": "^6.18.0",
     "@tanstack/react-query": "^5.90.0",
     "hono": "^4.10.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.1",
-    "zod": "^3.25.76",
-    "@clerk/react": "^6.18.0"
+    "react-router-dom": "^7.18.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261115.1",

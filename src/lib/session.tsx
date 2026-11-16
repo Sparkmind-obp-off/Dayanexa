@@ -3,11 +3,13 @@ import { useGet, type ApiError } from "./api";
 
 export interface Plan { code: "free" | "pro" | "plus"; name: string; tagline: string; priceMonthly: number; periodDays: number; highlight: boolean; limits: { requestsPerMonth: number; aiAssistsPerMonth: number; seats: number }; features: string[] }
 export interface Me {
-  user: { id: string; email: string | null; email_verified: number; display_name: string | null; status: string; created_at: string } | null;
+  user: { id: string; email: string | null; email_verified: number; display_name: string | null; status: string; created_at: string; onboarded_at?: string | null } | null;
   roles: string[]; permissions: string[]; organizations: { id: string; name: string; kind: string; role: string }[]; primaryOrgId: string;
   contributor: { headline: string; skills: string; status: string } | null;
   plan: Plan; subscription: { plan_code: string; status: string; current_period_end: string | null; cancel_at_period_end: number } | null;
   usage: { requests: number; aiAssists: number };
+  window: { start: string; resetsAt: string; basis: string; periodDays: number };
+  termsVersion: string; needsOnboarding: boolean;
 }
 interface SessionCtx { me: Me | undefined; can: (p: string) => boolean; isStaff: boolean; loading: boolean; error: ApiError | null; refetch: () => void }
 const Ctx = createContext<SessionCtx>({ me: undefined, can: () => false, isStaff: false, loading: true, error: null, refetch: () => {} });

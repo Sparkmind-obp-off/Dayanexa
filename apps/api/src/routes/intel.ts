@@ -128,7 +128,7 @@ intel.post("/discovery/extract", requirePermission("provider:run"), rateLimit("f
 /** Specialized Actor collection (Apify OR Scrape.ly). Off by default; allowlist + charge cap; benchmark recorded. */
 intel.post("/discovery/actor-run", requirePermission("provider:admin"), rateLimit("actors", 3, 300), async (c) => {
   const p = P(c), d = D(c);
-  const input = await body(c, z.object({ provider: z.enum(["apify", "scrapely"]), actorId: text(120, 3), input: z.record(z.unknown()).default({}), maxItems: z.number().int().min(1).max(50).default(10), sourceLabel: text(120, 2), benchmark: z.boolean().default(false) }));
+  const input = await body(c, z.object({ provider: z.enum(["apify", "scrapely"]), actorId: text(120, 3), input: z.record(z.string(), z.unknown()).default({}), maxItems: z.number().int().min(1).max(50).default(10), sourceLabel: text(120, 2), benchmark: z.boolean().default(false) }));
   const selected = c.env.SPECIALIZED_SCRAPER || "none";
   if (!input.benchmark && selected !== input.provider) fail(423, "PROVIDER_NOT_SELECTED", `Specialized scraper '${input.provider}' is not selected (current: ${selected}). Run as benchmark or select by owner config.`);
   if (!list(c.env.SPECIALIZED_ACTOR_ALLOWLIST).includes(input.actorId)) fail(403, "ACTOR_NOT_ALLOWLISTED", "Actor must be reviewed (README, schema, terms) and allowlisted by the owner first.");

@@ -46,7 +46,7 @@ export function useAction<V = any, R = any>(fn: (api: Api, vars: V) => Promise<R
 
 export const idr = (minor: number | null | undefined) =>
   minor === null || minor === undefined ? "—" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(minor));
-export const dt = (v: string | null | undefined) => (v ? new Date(v.includes("T") ? v : v.replace(" ", "T") + "Z").toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—");
+export const dt = (v: string | null | undefined) => (v ? new Date(v.includes("T") ? v : v.replace(" ", "T") + "Z").toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }) + " WIB" : "—");
 export const newIdemKey = () => crypto.randomUUID();
 export const humanError = (e: unknown) => {
   if (e instanceof ApiError) {
@@ -55,7 +55,7 @@ export const humanError = (e: unknown) => {
       AUTH_NOT_CONFIGURED: "Verifikasi Clerk belum dikonfigurasi di server.",
       UNAUTHENTICATED: "Sesi Anda berakhir. Silakan masuk kembali.",
       FORBIDDEN: "Anda tidak memiliki izin untuk aksi ini.",
-      PLAN_LIMIT_REACHED: e.message, RATE_LIMITED: "Terlalu banyak permintaan. Coba lagi sebentar.",
+      PLAN_LIMIT_REACHED: e.message, PLAN_FEATURE_REQUIRED: e.message, QUOTE_VERSION_MISMATCH: "Penawaran telah berubah. Muat ulang dan tinjau versi terbaru.", RATE_LIMITED: "Terlalu banyak permintaan. Coba lagi sebentar.",
     };
     return map[e.code] ?? `${e.message} (${e.code})`;
   }

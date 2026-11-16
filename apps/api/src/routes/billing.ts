@@ -8,18 +8,21 @@ import { fail } from "../lib/http";
 import { body, optText, text } from "../lib/validate";
 import { GATEWAY_IDS } from "../payments/types";
 import { audit } from "../services/audit";
-import { currentSubscription, subscribe, usageThisMonth } from "../services/billing";
+import { subscribe } from "../services/billing";
+import { entitlements } from "../services/entitlements";
 import { D, P, RID } from "./helpers";
 
 export const billing = new Hono<AppEnv>();
 
 billing.get("/billing", async (c) => {
   const p = P(c), d = D(c);
-  const [cur, usage, history] = await Promise.all([
-    currentSubscription(d, p.primaryOrgId), usageThisMonth(d, p.primaryOrgId),
-    many(d, "SELECT s.id,s.plan_code,s.status,s.current_period_start,s.current_period_end,s.created_at,pi.status AS payment_status,pi.mode,pi.amount,pi.checkout_url FROM subscriptions s LEFT JOIN payment_intents pi ON pi.id=s.payment_intent_id WHERE s.org_id=? ORDER BY s.created_at DESC LIMIT 20", p.primaryOrgId),
+  const [ent, history, invoices] = await Promise.all([
+    entitlements(d, p.primaryOrgId),
+    many(d, "SELECT s.id,s.plan_code,s.status,s.current_period_start,s.current_period_end,s.cancel_at_period_end,s.created_at,pi.status AS payment_status,pi.mode,pi.amount,pi.checkout_url FROM subscriptions s LEFT JOIN payment_intents pi ON pi.id=s.payment_intent_id WHERE s.org_id=? ORDER BY s.created_at DESC LIMIT 20", p.primaryOrgId),
+    many(d, "SELECT id,number,description,subtotal_minor,tax_minor,total_minor,mode,status,issued_at,paid_at FROM invoices WHERE org_id=? AND kind='subscription' ORDER BY issued_at DESC LIMIT 50", p.primaryOrgId),
   ]);
-  return c.json({ ...cur, usage, history });
+  return c.json({ plan: ent.plan, subscription: ent.subscription, usage: ent.usage, window: ent.window, history, invoices, autoRenewal: false,
+    note: "Langganan = akses platform & kuota per 30 hari, tanpa perpanjangan otomatis. Proyek ditagih terpisah melalui penawaran." });
 });
 billing.post("/billing/subscribe", rateLimit("subscribe", 6, 300), async (c) => {
   const p = P(c);
