@@ -4,10 +4,8 @@ import react from "@vitejs/plugin-react";
 
 /**
  * Clerk's publishable key is public client configuration, not a secret.
- * The canonical value lives in wrangler.jsonc (same deployment contract as
- * the Pages Worker). Cloudflare runtime vars are not injected into an
- * already-built Vite bundle, so resolve it at build time. An explicit VITE_
- * override remains available for separate preview/production environments.
+ * The canonical value lives in wrangler.jsonc. Cloudflare runtime vars are
+ * not injected into an already-built Vite bundle, so resolve it at build time.
  */
 function resolveClerkPublishableKey(mode: string): string {
   const env = loadEnv(mode, process.cwd(), "");
@@ -20,7 +18,7 @@ function resolveClerkPublishableKey(mode: string): string {
   if (fromEnvironment) return fromEnvironment.trim();
 
   const wranglerConfig = readFileSync(new URL("./wrangler.jsonc", import.meta.url), "utf8");
-  const match = wranglerConfig.match(/"CLERK_PUBLISHABLE_KEY"\\s*:\\s*"([^"]+)"/);
+  const match = wranglerConfig.match(/"CLERK_PUBLISHABLE_KEY"\s*:\s*"([^"]+)"/);
   const fromCanonicalConfig = match?.[1]?.trim();
   if (fromCanonicalConfig) return fromCanonicalConfig;
 
