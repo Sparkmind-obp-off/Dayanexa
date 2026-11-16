@@ -19,6 +19,8 @@ This file is the single top-level source of truth. Detailed contracts remain bin
 - `docs/26-provider-runtime-governance.md` — provider account/quota/runtime/fallback rules.
 - `docs/27-clerk-publishable-key-build-contract.md` — Clerk public-key Vite build-time contract and production verification.\n- `docs/28-production-build-artifact-and-pages-deployment.md` — canonical manual Wrangler build, deployment, production smoke tests and rollback contract.
 - `docs/29-end-to-end-implementation-and-defect-resolution-contract.md` — binding execution contract for implementing all five engines, closing defects, integrating every journey and proving acceptance.
+- `docs/30-member-v3-access-and-free-entitlement.md` — member V3 product access and Free entitlement contract.
+- `docs/31-member-discovery-privilege-and-real-demand-access.md` — binding Member Discovery Privilege, real-data access, Actor allocation and fair-use limits.
 - `prompts/DAYANEXA_FULL_IMPLEMENTATION_MASTER_PROMPT.md` — canonical execution prompt; must implement, test and resolve defects, not stop at documentation.
 
 The implementation and defect-resolution contract in docs/29 is mandatory for every implementation batch. If any detailed document conflicts with the manual Wrangler release decision, this master and docs/28 prevail.
@@ -54,7 +56,7 @@ Discover demand first regardless of current capability. Then choose to reuse, co
 
 ## 2A. Account identity, platform roles and V3 product entitlement are separate
 
-The binding implementation contract for member V3 access is [docs/30-member-v3-access-and-free-entitlement.md](30-member-v3-access-and-free-entitlement.md). Follow its access matrix, Free-plan cost rules and acceptance criteria.
+The binding implementation contract for member V3 access is [docs/30-member-v3-access-and-free-entitlement.md](30-member-v3-access-and-free-entitlement.md). Follow its access matrix, Free-plan cost rules and acceptance criteria. Every eligible active member also receives the policy-driven Member Discovery Privilege defined in [docs/31-member-discovery-privilege-and-real-demand-access.md](31-member-discovery-privilege-and-real-demand-access.md): one guaranteed real-data exploration per rolling 30 days, plus one conditional extra run only when approved shared capacity/budget permits. This is an entitlement, not a selective gift. It must use reviewed public sources/Actors, real provenance, strict per-member/provider/program caps, atomic reservations and reconciliation; no private-group bypass, arbitrary Actor, credential exposure, silent paid spend or member charge.
 
 
 The platform owner identity `sparkmind.support@gmail.com` remains the owner/platform administrator. A normal account such as `elmatador0197@gmail.com` may remain `member` and must still be able to use the complete DAYANEXA V3 product through an explicit Free-plan product entitlement. **Do not promote a member to owner/operator/analyst or grant platform administration as a workaround.** The implementation target includes making V3 usable by member accounts; it is not satisfied by hiding the V3 product behind staff-only role permissions.
