@@ -6,6 +6,13 @@ const get = (p) => fetch(base + p, { redirect: "manual" });
 await check("health ok", async () => { const j = await (await get("/api/v1/health")).json(); if (!j.ok) throw new Error(JSON.stringify(j)); });
 await check("/me requires auth (401)", async () => { const s = (await get("/api/v1/me")).status; if (s !== 401) throw new Error(`status ${s}`); });
 await check("admin API requires auth (401)", async () => { const s = (await get("/api/v1/admin/gateway/status")).status; if (s !== 401) throw new Error(`status ${s}`); });
+for (const p of ["/api/v1/discovery/entitlement", "/api/v1/discovery/catalog", "/api/v1/discovery/campaigns", "/api/v1/admin/discovery/sources"])
+  await check(`${p} requires auth (401)`, async () => { const s = (await get(p)).status; if (s !== 401) throw new Error(`status ${s}`); });
+await check("discovery SPA route served (200)", async () => { const s = (await get("/app/discovery")).status; if (s !== 200) throw new Error(`status ${s}`); });
+await check("no provider secret in SPA bundle", async () => {
+  const html = await (await get("/")).text();
+  for (const m of html.matchAll(/src="(\/assets\/[^"]+\.js)"/g)) { const js = await (await get(m[1])).text(); if (/tvly-|fc-[A-Za-z0-9]{20}|apify_api_|sk_live_/.test(js)) throw new Error(`secret-like string in ${m[1]}`); }
+});
 await check("SPA served (200)", async () => { const s = (await get("/")).status; if (s !== 200) throw new Error(`status ${s}`); });
 for (const [n, r] of checks) console.log(`${r.startsWith("PASS") ? "✓" : "✗"} ${n} — ${r}`);
 if (checks.some(([, r]) => !r.startsWith("PASS"))) process.exit(1);
